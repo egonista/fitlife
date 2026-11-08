@@ -1,0 +1,42 @@
+{% extends "core/base.html" %}
+
+{% block title %}{{ titulo }} | FitLife{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-7">
+        <div class="card card-fitlife p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom border-secondary">
+                <div>
+                    <h4 class="fw-bold mb-1">{{ titulo }}</h4>
+                    <div class="small text-secondary">{{ subtitulo }}</div>
+                </div>
+                <a href="{% url url_volver %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Volver
+                </a>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="row g-3">
+                    {% for field in form %}
+                    <div class="col-12 {% if field.name != 'descripcion' %}col-md-6{% endif %}">
+                        <label class="form-label small text-secondary fw-semibold">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}
+                            <div class="text-danger small mt-1">{{ field.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top border-secondary">
+                    <a href="{% url url_volver %}" class="btn btn-outline-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-emerald">
+                        <i class="bi bi-check2-circle me-1"></i> Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

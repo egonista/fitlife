@@ -1,0 +1,148 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('FitLife Admin') }}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    :root {
+        --fitlife-primary: #0f172a;
+        --fitlife-secondary: #1e293b;
+        --fitlife-accent: #10b981;
+        --fitlife-accent-hover: #059669;
+        --fitlife-cyan: #06b6d4;
+    }
+
+    #header {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #064e3b 100%) !important;
+        color: #f8fafc !important;
+        border-bottom: 2px solid #10b981;
+        padding: 12px 24px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    #branding h1,
+    #branding h1 a:link,
+    #branding h1 a:visited {
+        color: #ffffff !important;
+        font-weight: 800;
+        letter-spacing: -0.3px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .fitlife-logo-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #10b981, #06b6d4);
+        color: #0f172a;
+        font-weight: 900;
+        font-size: 13px;
+        padding: 4px 10px;
+        border-radius: 8px;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+        box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35);
+    }
+
+    .fitlife-top-nav {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 6px;
+    }
+
+    .fitlife-nav-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 13px;
+        border-radius: 9999px;
+        font-size: 12px;
+        font-weight: 700;
+        text-decoration: none !important;
+        transition: all 0.2s ease;
+    }
+
+    .fitlife-nav-btn-dashboard {
+        background-color: #10b981;
+        color: #064e3b !important;
+        border: 1px solid #34d399;
+    }
+
+    .fitlife-nav-btn-dashboard:hover {
+        background-color: #34d399;
+        color: #022c22 !important;
+        transform: translateY(-1px);
+    }
+
+    .fitlife-nav-btn-qr {
+        background-color: rgba(56, 189, 248, 0.16);
+        color: #7dd3fc !important;
+        border: 1px solid rgba(56, 189, 248, 0.45);
+    }
+
+    .fitlife-nav-btn-qr:hover {
+        background-color: rgba(56, 189, 248, 0.28);
+        color: #e0f2fe !important;
+        transform: translateY(-1px);
+    }
+
+    .module h2, .module caption, .inline-group h2 {
+        background: #0f172a !important;
+        color: #f8fafc !important;
+        border-left: 4px solid #10b981;
+    }
+
+    div.breadcrumbs {
+        background: #1e293b !important;
+        color: #94a3b8 !important;
+    }
+
+    div.breadcrumbs a {
+        color: #34d399 !important;
+    }
+
+    .button, input[type=submit], input[type=button], .submit-row input, a.button {
+        background: #10b981 !important;
+        color: #064e3b !important;
+        font-weight: 700 !important;
+        border-radius: 6px !important;
+    }
+
+    .button:hover, input[type=submit]:hover, input[type=button]:hover {
+        background: #059669 !important;
+        color: #ffffff !important;
+    }
+
+    .button.default, input[type=submit].default, .submit-row input.default {
+        background: #059669 !important;
+        color: #ffffff !important;
+    }
+</style>
+{% endblock %}
+
+{% block branding %}
+<h1 id="site-name">
+    <a href="{% url 'admin:index' %}">
+        <span class="fitlife-logo-badge">FITLIFE</span>
+        <span>{{ site_header|default:_('FitLife — Administración Central') }}</span>
+    </a>
+</h1>
+{% endblock %}
+
+{% block nav-global %}
+{% url 'dashboard' as dashboard_url %}
+{% url 'simulador_qr' as simulador_url %}
+<div class="fitlife-top-nav">
+    <a href="{{ dashboard_url|default:'/' }}" class="fitlife-nav-btn fitlife-nav-btn-dashboard">
+        📊 Dashboard en Tiempo Real
+    </a>
+    <a href="{{ simulador_url|default:'/simulador-qr/' }}" class="fitlife-nav-btn fitlife-nav-btn-qr">
+        📱 Simulador de Acceso QR
+    </a>
+</div>
+{% endblock %}

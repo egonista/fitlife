@@ -1,0 +1,310 @@
+{% extends "core/base.html" %}
+
+{% block title %}Simulador de Acceso QR en Milisegundos | FitLife{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <span class="text-info small fw-bold text-uppercase"><i class="bi bi-cpu me-1"></i>Lector de Torniquete de Baja Latencia</span>
+        <h2 class="fw-bold mb-0">Simulador y Validador de Acceso QR en Tiempo Real</h2>
+    </div>
+    <div class="d-flex align-items-center gap-3">
+        <div class="px-3 py-2 rounded-pill bg-dark border border-secondary">
+            <span class="text-secondary small me-2">Aforo Actual:</span>
+            <strong class="mono text-success" id="sim-aforo-actual">{{ estado_aforo.aforo_actual }}</strong>
+            <span class="mono text-secondary">/ <span id="sim-aforo-maximo">{{ estado_aforo.aforo_maximo }}</span></span>
+        </div>
+        <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline-light">
+            <i class="bi bi-speedometer2 me-1"></i> Ver Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Columna Izquierda: Selector Rápido de Socios de Prueba con Imagen QR -->
+    <div class="col-12 col-lg-5">
+        <div class="card card-fitlife p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="fw-bold mb-0"><i class="bi bi-people-fill text-success me-2"></i>Selector Rápido de Credenciales QR</h5>
+                    <small class="text-secondary">Seleccione un socio (Activa, Vencida, Congelada) o un QR adulterado</small>
+                </div>
+            </div>
+
+            <!-- Botón de prueba de QR Inválido / Falsificado -->
+            <div class="mb-3">
+                <button type="button"
+                        class="btn btn-outline-danger w-100 text-start d-flex justify-content-between align-items-center p-3 rounded-3"
+                        onclick="seleccionarQRInvalido()">
+                    <div>
+                        <div class="fw-bold"><i class="bi bi-shield-x me-1"></i> Simular Código QR Inválido / No Registrado</div>
+                        <div class="small mono opacity-75">Token: 00000000-0000-0000-0000-999999999999</div>
+                    </div>
+                    <span class="badge bg-danger">QR INVÁLIDO</span>
+                </button>
+            </div>
+
+            <div class="d-flex flex-column gap-2 overflow-auto" style="max-height: 540px;">
+                {% for socio in socios %}
+                <div class="p-3 rounded-3 bg-dark border border-secondary socio-selector-card"
+                     style="cursor: pointer; transition: all 0.15s;"
+                     onclick="seleccionarSocioQR('{{ socio.token_qr }}', '{{ socio.nombre_completo|escapejs }}', '{{ socio.rut|escapejs }}', '{{ socio.estado_membresia }}', '{{ socio.plan.nombre|escapejs }}', '{{ socio.fecha_vencimiento|date:'d/m/Y' }}', 'data:image/png;base64,{{ socio.qr_base64 }}')">
+                    <div class="d-flex align-items-center gap-3">
+                        <img src="data:image/png;base64,{{ socio.qr_base64 }}"
+                             alt="QR {{ socio.nombre_completo }}"
+                             class="rounded bg-white p-1"
+                             style="width: 62px; height: 62px; object-fit: contain;">
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="fw-bold text-light">{{ socio.nombre_completo }}</div>
+                                {% if socio.estado_membresia == 'ACTIVA' %}
+                                    <span class="badge bg-success">ACTIVA</span>
+                                {% elif socio.estado_membresia == 'VENCIDA' %}
+                                    <span class="badge bg-danger">VENCIDA</span>
+                                {% else %}
+                                    <span class="badge bg-info text-dark">CONGELADA</span>
+                                {% endif %}
+                            </div>
+                            <div class="small text-secondary">
+                                RUT: <span class="mono">{{ socio.rut }}</span> &bull; {{ socio.plan.nombre }}
+                            </div>
+                            <div class="small text-secondary">
+                                Vence: <span class="mono">{{ socio.fecha_vencimiento|date:"d/m/Y" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center text-secondary py-4">
+                    No hay socios cargados. Ejecute <code>python manage.py seed_fitlife</code>.
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Columna Derecha: Lector QR y Tarjeta Visual de Respuesta en Milisegundos -->
+    <div class="col-12 col-lg-7">
+        <div class="card card-fitlife p-4 mb-4 border-info border-opacity-25">
+            <div class="row g-4 align-items-center">
+                <!-- Vista Previa de Credencial QR -->
+                <div class="col-12 col-md-4 text-center">
+                    <div class="p-3 bg-white rounded-4 d-inline-block shadow">
+                        <img id="visor-qr-img"
+                             src="{% if socios %}data:image/png;base64,{{ socios.0.qr_base64 }}{% endif %}"
+                             alt="Código QR Activo"
+                             style="width: 155px; height: 155px; object-fit: contain;">
+                    </div>
+                    <div class="mt-2 fw-bold text-light" id="visor-socio-nombre">
+                        {% if socios %}{{ socios.0.nombre_completo }}{% else %}Seleccione un socio{% endif %}
+                    </div>
+                    <div class="small text-secondary mono" id="visor-socio-detalle">
+                        {% if socios %}{{ socios.0.rut }} | {{ socios.0.estado_membresia }}{% endif %}
+                    </div>
+                </div>
+
+                <!-- Controles del Torniquete -->
+                <div class="col-12 col-md-8">
+                    <h5 class="fw-bold mb-2"><i class="bi bi-upc-scan text-info me-2"></i>Terminal de Torniquete Óptico</h5>
+                    <p class="text-secondary small mb-3">
+                        Envía el token UUID al endpoint <code>POST /api/accesos/validar-qr/</code> y mide la latencia exacta de validación en PostgreSQL.
+                    </p>
+
+                    <div class="mb-3">
+                        <label class="form-label small text-secondary fw-semibold">Token QR Escaneado (UUID)</label>
+                        <input type="text"
+                               id="input-token-qr"
+                               class="form-control bg-dark text-info border-secondary mono"
+                               value="{% if socios %}{{ socios.0.token_qr }}{% endif %}"
+                               placeholder="Ingrese o seleccione un UUID QR...">
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-12 col-sm-6">
+                            <button type="button"
+                                    class="btn btn-emerald w-100 py-2"
+                                    onclick="ejecutarValidacionQR('ENTRADA')">
+                                <i class="bi bi-box-arrow-in-right me-1"></i> Validar ENTRADA (+1 Aforo)
+                            </button>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <button type="button"
+                                    class="btn btn-outline-info w-100 py-2 fw-bold"
+                                    onclick="ejecutarValidacionQR('SALIDA')">
+                                <i class="bi bi-box-arrow-right me-1"></i> Registrar SALIDA (-1 Aforo)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta Visual de Respuesta Instantánea -->
+        <div id="tarjeta-respuesta-qr" class="card card-fitlife p-4 mb-4 border-2 border-secondary">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-3">
+                    <div id="icono-respuesta-qr" class="rounded-circle bg-secondary bg-opacity-25 text-secondary d-flex align-items-center justify-content-center" style="width: 58px; height: 58px; font-size: 26px;">
+                        <i class="bi bi-qr-code-scan"></i>
+                    </div>
+                    <div>
+                        <div class="small text-secondary text-uppercase fw-bold" id="subtitulo-respuesta-qr">Torniquete en Espera</div>
+                        <h4 class="fw-black mb-1" id="titulo-respuesta-qr">Seleccione un socio y presione Validar</h4>
+                        <div class="text-secondary small" id="motivo-respuesta-qr">
+                            El resultado de validación, estado de membresía y tiempo de respuesta en milisegundos aparecerán aquí.
+                        </div>
+                    </div>
+                </div>
+                <div class="text-end">
+                    <div class="small text-secondary">Tiempo Respuesta</div>
+                    <div class="fs-3 fw-bold mono text-info" id="latencia-respuesta-qr">0.00 ms</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Historial Reciente de Validaciones -->
+        <div class="card card-fitlife p-4">
+            <h6 class="fw-bold mb-3"><i class="bi bi-clock-history text-secondary me-2"></i>Últimas Lecturas en este Terminal</h6>
+            <div class="table-responsive">
+                <table class="table table-dark table-sm align-middle mb-0 small">
+                    <thead>
+                        <tr class="text-secondary">
+                            <th>Hora</th>
+                            <th>Socio</th>
+                            <th>Mov.</th>
+                            <th>Estado Torniquete</th>
+                            <th class="text-end">Tiempo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-historial-simulador">
+                        {% for acc in ultimos_accesos %}
+                        <tr>
+                            <td class="mono text-secondary">{{ acc.fecha_hora|date:"H:i:s" }}</td>
+                            <td>{{ acc.socio.nombre_completo|default:"QR Inválido" }}</td>
+                            <td><span class="badge bg-dark border border-secondary">{{ acc.tipo_movimiento }}</span></td>
+                            <td>
+                                {% if acc.resultado == 'PERMITIDO' %}
+                                    <span class="badge bg-success">PERMITIDO</span>
+                                {% else %}
+                                    <span class="badge bg-danger">{{ acc.get_resultado_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end mono text-success fw-bold">{{ acc.tiempo_respuesta_ms|floatformat:2 }} ms</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function seleccionarSocioQR(token, nombre, rut, estado, plan, vencimiento, qrBase64) {
+    document.getElementById("input-token-qr").value = token;
+    document.getElementById("visor-socio-nombre").textContent = nombre;
+    document.getElementById("visor-socio-detalle").textContent = `${rut} | ${estado} (Vence: ${vencimiento})`;
+    const img = document.getElementById("visor-qr-img");
+    if (img && qrBase64) {
+        img.src = qrBase64;
+        img.style.opacity = "1";
+    }
+}
+
+function seleccionarQRInvalido() {
+    document.getElementById("input-token-qr").value = "00000000-0000-0000-0000-999999999999";
+    document.getElementById("visor-socio-nombre").textContent = "Credencial Desconocida / Falsificada";
+    document.getElementById("visor-socio-detalle").textContent = "UUID no registrado en PostgreSQL";
+    const img = document.getElementById("visor-qr-img");
+    if (img) {
+        img.style.opacity = "0.25";
+    }
+}
+
+async function ejecutarValidacionQR(tipoMovimiento) {
+    const tokenQR = document.getElementById("input-token-qr").value.trim();
+    const csrftoken = getCookie("csrftoken");
+
+    try {
+        const resp = await fetch("{% url 'api_validar_qr' %}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrftoken,
+            },
+            body: JSON.stringify({
+                token_qr: tokenQR,
+                tipo_movimiento: tipoMovimiento,
+            }),
+        });
+        const data = await resp.json();
+
+        // Actualizar indicadores de aforo
+        document.getElementById("sim-aforo-actual").textContent = data.aforo_actual;
+        document.getElementById("sim-aforo-maximo").textContent = data.aforo_maximo;
+
+        // Actualizar tarjeta visual de respuesta
+        const card = document.getElementById("tarjeta-respuesta-qr");
+        const icono = document.getElementById("icono-respuesta-qr");
+        const subtitulo = document.getElementById("subtitulo-respuesta-qr");
+        const titulo = document.getElementById("titulo-respuesta-qr");
+        const motivo = document.getElementById("motivo-respuesta-qr");
+        const latencia = document.getElementById("latencia-respuesta-qr");
+
+        latencia.textContent = `${data.tiempo_respuesta_ms.toFixed(2)} ms`;
+        motivo.textContent = data.motivo;
+        subtitulo.textContent = `MOVIMIENTO: ${data.tipo_movimiento} | AFORO: ${data.aforo_actual}/${data.aforo_maximo}`;
+
+        if (data.permitido) {
+            card.className = "card card-fitlife p-4 mb-4 border-2 border-success bg-success bg-opacity-10";
+            icono.className = "rounded-circle bg-success text-dark d-flex align-items-center justify-content-center";
+            icono.innerHTML = '<i class="bi bi-unlock-fill"></i>';
+            titulo.className = "fw-black mb-1 text-success";
+            titulo.textContent = `ACCESO PERMITIDO — ${data.socio ? data.socio.nombre_completo : ''}`;
+        } else {
+            card.className = "card card-fitlife p-4 mb-4 border-2 border-danger bg-danger bg-opacity-10";
+            icono.className = "rounded-circle bg-danger text-white d-flex align-items-center justify-content-center";
+            icono.innerHTML = '<i class="bi bi-shield-lock-fill"></i>';
+            titulo.className = "fw-black mb-1 text-danger";
+            titulo.textContent = `ACCESO DENEGADO (${data.resultado_display})`;
+        }
+
+        // Insertar fila al principio del historial
+        const tbody = document.getElementById("tabla-historial-simulador");
+        const socioNombre = data.socio ? data.socio.nombre_completo : "QR Inválido";
+        const badgeHtml = data.permitido
+            ? '<span class="badge bg-success">PERMITIDO</span>'
+            : `<span class="badge bg-danger">${data.resultado_display}</span>`;
+
+        const nuevaFila = `
+            <tr>
+                <td class="mono text-secondary">${data.fecha_hora}</td>
+                <td class="fw-semibold">${socioNombre}</td>
+                <td><span class="badge bg-dark border border-secondary">${data.tipo_movimiento}</span></td>
+                <td>${badgeHtml}</td>
+                <td class="text-end mono text-success fw-bold">${data.tiempo_respuesta_ms.toFixed(2)} ms</td>
+            </tr>
+        `;
+        tbody.insertAdjacentHTML("afterbegin", nuevaFila);
+    } catch (error) {
+        console.error("Error al validar código QR:", error);
+    }
+}
+</script>
+{% endblock %}

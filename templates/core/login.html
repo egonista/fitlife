@@ -1,0 +1,66 @@
+{% extends "core/base.html" %}
+
+{% block title %}Iniciar Sesión | FitLife{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center align-items-center" style="min-height: 78vh;">
+    <div class="col-12 col-sm-10 col-md-7 col-lg-5 col-xl-4">
+        <div class="card card-fitlife p-4 border-success border-opacity-50">
+            <div class="text-center mb-4">
+                <span class="brand-badge fs-5 d-inline-block mb-2"><i class="bi bi-activity"></i> FITLIFE</span>
+                <h3 class="fw-bold mb-1">Acceso Operativo</h3>
+                <p class="text-secondary small mb-0">
+                    Plataforma de Control de Asistencia QR, Aforo y Clases Grupales
+                </p>
+            </div>
+
+            {% if form.errors %}
+                <div class="alert alert-danger py-2 small">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                    Credenciales inválidas. Verifique su usuario y contraseña.
+                </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'login' %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-secondary">Usuario</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-dark border-secondary text-secondary"><i class="bi bi-person"></i></span>
+                        <input type="text" name="username" id="id_username" class="form-control bg-dark text-light border-secondary" placeholder="admin o recepcion" required autofocus>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label small fw-semibold text-secondary">Contraseña</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-dark border-secondary text-secondary"><i class="bi bi-key"></i></span>
+                        <input type="password" name="password" id="id_password" class="form-control bg-dark text-light border-secondary" placeholder="••••••••" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-emerald w-100 py-2 mb-3">
+                    <i class="bi bi-box-arrow-in-right me-1"></i> Ingresar al Sistema
+                </button>
+            </form>
+
+            <div class="border-top border-secondary border-opacity-25 pt-3 mt-2">
+                <div class="small text-secondary mb-2 fw-semibold">Credenciales de demostración (clic para autocompletar):</div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-success w-50" onclick="fillLogin('admin', 'Valorant-1')">
+                        <i class="bi bi-shield-check"></i> Admin (<code>admin</code>)
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-info w-50" onclick="fillLogin('recepcion', 'Valorant-1')">
+                        <i class="bi bi-person-badge"></i> Recepción (<code>recepcion</code>)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function fillLogin(user, pass) {
+    document.getElementById('id_username').value = user;
+    document.getElementById('id_password').value = pass;
+}
+</script>
+{% endblock %}
