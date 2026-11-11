@@ -1,67 +1,34 @@
 {% extends "core/base.html" %}
 
-{% block title %}Clases Grupales y Lista de Espera Automática | FitLife{% endblock %}
+{% block title %}Clases Grupales e Inscripción de Alumnos | FitLife Gym{% endblock %}
 
 {% block content %}
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
     <div>
-        <span class="text-warning small fw-bold text-uppercase"><i class="bi bi-calendar2-check me-1"></i>Gestión Transaccional de Cupos (transaction.atomic)</span>
-        <h2 class="fw-bold mb-0">Clases Grupales, Reservas y Promoción Automática de Lista de Espera</h2>
+        <span class="text-warning small fw-bold text-uppercase"><i class="bi bi-calendar2-week me-1"></i>Agenda Deportiva de Sucursal</span>
+        <h2 class="fw-bold mb-0">Clases Grupales e Inscripción de Alumnos</h2>
     </div>
-    <div class="d-flex gap-2">
-        <button type="button" class="btn btn-sm btn-outline-light" data-bs-toggle="modal" data-bs-target="#modalCrearClase">
-            <i class="bi bi-plus-circle me-1"></i> Nueva Clase Grupal
+    <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-sm btn-info fw-bold text-dark" data-bs-toggle="modal" data-bs-target="#modalNuevoAlumnoClase">
+            <i class="bi bi-person-plus-fill me-1"></i> Registrar Nuevo Alumno e Inscribir
+        </button>
+        <button type="button" class="btn btn-sm btn-emerald" data-bs-toggle="modal" data-bs-target="#modalCrearClase">
+            <i class="bi bi-plus-circle me-1"></i> Crear Nueva Clase
         </button>
     </div>
 </div>
 
-<!-- Formulario Rápido de Inscripción en Clase -->
-<div class="card card-fitlife p-4 mb-4 border-warning border-opacity-25">
-    <form method="post" action="{% url 'reserva_crear' %}" class="row g-3 align-items-end">
-        {% csrf_token %}
-        <div class="col-12 col-md-5">
-            <label class="form-label small text-secondary fw-semibold">
-                <i class="bi bi-bicycle text-warning me-1"></i> Seleccionar Clase Grupal
-            </label>
-            <select name="clase" class="form-select bg-dark text-light border-secondary" required>
-                {% for c in clases %}
-                <option value="{{ c.pk }}">
-                    {{ c.nombre }} ({{ c.instructor }}) — Ocupación: {{ c.cupos_ocupados }}/{{ c.cupo_maximo }}
-                    {% if c.cupos_disponibles == 0 %}[LLENA - Entra a Lista de Espera]{% endif %}
-                </option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="col-12 col-md-5">
-            <label class="form-label small text-secondary fw-semibold">
-                <i class="bi bi-person-check text-info me-1"></i> Seleccionar Socio (Valida Membresía ACTIVA)
-            </label>
-            <select name="socio" class="form-select bg-dark text-light border-secondary" required>
-                {% for s in socios %}
-                <option value="{{ s.pk }}">
-                    {{ s.nombre_completo }} ({{ s.rut }}) — [{{ s.estado_membresia }}]
-                </option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="col-12 col-md-2">
-            <button type="submit" class="btn btn-emerald w-100 py-2">
-                <i class="bi bi-plus-circle me-1"></i> Reservar Cupo
-            </button>
-        </div>
-    </form>
-</div>
-
-<!-- Listado Detallado de Clases Grupales con Confirmados y Cola de Lista de Espera -->
+<!-- Listado de Clases Grupales con Inscripción Directa de Alumnos -->
 <div class="d-flex flex-column gap-4">
     {% for clase in clases %}
     <div class="card card-fitlife p-4">
+        <!-- Cabecera de la Clase -->
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3 pb-3 border-bottom border-secondary border-opacity-25">
             <div>
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex flex-wrap align-items-center gap-2">
                     <h4 class="fw-bold mb-0">{{ clase.nombre }}</h4>
                     {% if clase.cupos_disponibles == 0 %}
-                        <span class="badge bg-danger">CUPO COMPLETO ({{ clase.cupos_ocupados }}/{{ clase.cupo_maximo }})</span>
+                        <span class="badge bg-danger">SALA LLENA ({{ clase.cupos_ocupados }}/{{ clase.cupo_maximo }} inscritos)</span>
                     {% else %}
                         <span class="badge bg-success">{{ clase.cupos_disponibles }} cupos disponibles ({{ clase.cupos_ocupados }}/{{ clase.cupo_maximo }})</span>
                     {% endif %}
@@ -72,43 +39,83 @@
                     {% endif %}
                 </div>
                 <div class="text-secondary small mt-1">
-                    <i class="bi bi-person-badge me-1"></i> Instructor: <strong class="text-light">{{ clase.instructor }}</strong> &bull;
+                    <i class="bi bi-person-badge me-1"></i> Coach: <strong class="text-light">{{ clase.instructor }}</strong> &bull;
                     <i class="bi bi-geo-alt me-1"></i> Sala: <strong class="text-light">{{ clase.sala }}</strong> &bull;
-                    <i class="bi bi-clock me-1"></i> Inicio: <strong class="text-light">{{ clase.fecha_hora_inicio|date:"d/m/Y H:i" }}</strong> ({{ clase.duracion_minutos }} min)
+                    <i class="bi bi-clock me-1"></i> Horario: <strong class="text-light">{{ clase.fecha_hora_inicio|date:"d/m/Y H:i" }}</strong> ({{ clase.duracion_minutos }} min)
                 </div>
             </div>
             <div class="d-flex gap-2">
+                <button type="button"
+                        class="btn btn-sm btn-outline-info"
+                        onclick="abrirModalNuevoAlumnoParaClase('{{ clase.pk }}', '{{ clase.nombre|escapejs }}')">
+                    <i class="bi bi-person-plus me-1"></i> Crear Alumno para esta Clase
+                </button>
                 <a href="{% url 'clase_editar' clase.pk %}" class="btn btn-sm btn-outline-light">
                     <i class="bi bi-pencil me-1"></i> Editar Clase
                 </a>
                 <form method="post" action="{% url 'clase_eliminar' clase.pk %}" onsubmit="return confirm('¿Eliminar la clase {{ clase.nombre }}?');">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar clase">
                         <i class="bi bi-trash"></i>
                     </button>
                 </form>
             </div>
         </div>
 
+        <!-- Barra de Inscripción Rápida de Alumno en ESTA Clase -->
+        <form method="post" action="{% url 'reserva_crear' %}" class="p-3 rounded-3 bg-dark border border-secondary mb-4">
+            {% csrf_token %}
+            <input type="hidden" name="clase" value="{{ clase.pk }}">
+            <div class="row g-2 align-items-center">
+                <div class="col-12 col-md-4">
+                    <div class="small fw-bold text-light">
+                        <i class="bi bi-person-check-fill text-success me-1"></i> Agregar Alumno a {{ clase.nombre }}:
+                    </div>
+                    <div class="text-secondary" style="font-size: 12px;">
+                        {% if clase.cupos_disponibles > 0 %}
+                            Hay {{ clase.cupos_disponibles }} cupo(s) disponible(s) para ingreso directo.
+                        {% else %}
+                            Cupos llenos: el alumno quedará anotado automáticamente en la Lista de Espera.
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-12 col-md-5">
+                    <select name="socio" class="form-select form-select-sm bg-dark text-light border-secondary" required>
+                        <option value="">— Selecciona un alumno del gimnasio —</option>
+                        {% for s in socios %}
+                        <option value="{{ s.pk }}">
+                            {{ s.nombre_completo }} ({{ s.rut }}) — Plan {{ s.estado_membresia }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-md-3">
+                    <button type="submit" class="btn btn-sm btn-emerald w-100 py-2">
+                        <i class="bi bi-plus-circle me-1"></i>
+                        {% if clase.cupos_disponibles > 0 %}Inscribir Alumno{% else %}Anotar en Lista de Espera{% endif %}
+                    </button>
+                </div>
+            </div>
+        </form>
+
         <div class="row g-4">
-            <!-- Columna 1: Socios con Reserva CONFIRMADA -->
+            <!-- Columna 1: Alumnos Inscritos / Confirmados -->
             <div class="col-12 col-lg-6">
                 <div class="p-3 rounded-3 bg-dark border border-success border-opacity-50 h-100">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h6 class="fw-bold text-success mb-0">
-                            <i class="bi bi-check2-circle me-1"></i> Cupos Confirmados ({{ clase.cupos_ocupados }} / {{ clase.cupo_maximo }})
+                            <i class="bi bi-people-fill me-1"></i> Alumnos Inscritos en la Clase ({{ clase.cupos_ocupados }} / {{ clase.cupo_maximo }})
                         </h6>
-                        <span class="small text-secondary">Al cancelar, sube automáticamente el #1 en espera</span>
                     </div>
 
                     <div class="table-responsive">
                         <table class="table table-dark table-sm align-middle mb-0 small">
                             <thead>
                                 <tr class="text-secondary">
-                                    <th>Socio</th>
+                                    <th>Alumno</th>
                                     <th>RUT</th>
                                     <th>Estado</th>
-                                    <th class="text-end">Acción</th>
+                                    <th class="text-end">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -116,19 +123,38 @@
                                 <tr>
                                     <td class="fw-semibold">{{ res.socio.nombre_completo }}</td>
                                     <td class="mono text-secondary">{{ res.socio.rut }}</td>
-                                    <td><span class="badge bg-success">CONFIRMADA</span></td>
+                                    <td>
+                                        {% if res.estado == 'ASISTIO' %}
+                                            <span class="badge bg-info text-dark"><i class="bi bi-check2-all"></i> ASISTIÓ</span>
+                                        {% else %}
+                                            <span class="badge bg-success">CONFIRMADO</span>
+                                        {% endif %}
+                                    </td>
                                     <td class="text-end">
-                                        <form method="post" action="{% url 'reserva_cancelar' res.pk %}" class="d-inline">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn btn-xs btn-sm btn-outline-danger py-0 px-2">
-                                                <i class="bi bi-x-circle me-1"></i> Cancelar Reserva
-                                            </button>
-                                        </form>
+                                        <div class="d-inline-flex gap-1">
+                                            {% if res.estado == 'CONFIRMADA' %}
+                                            <form method="post" action="{% url 'reserva_asistencia' res.pk %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-success py-0 px-2" title="Marcar Asistencia">
+                                                    <i class="bi bi-check2"></i> Presente
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                            <a href="{% url 'socio_editar' res.socio.pk %}" class="btn btn-sm btn-outline-light py-0 px-2" title="Editar datos del alumno">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <form method="post" action="{% url 'reserva_cancelar' res.pk %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Liberar cupo">
+                                                    <i class="bi bi-x-circle me-1"></i> Quitar
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="4" class="text-center text-secondary py-3">Sin reservas confirmadas en esta clase.</td>
+                                    <td colspan="4" class="text-center text-secondary py-3">Aún no hay alumnos inscritos en esta clase.</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -137,24 +163,24 @@
                 </div>
             </div>
 
-            <!-- Columna 2: Cola Ordenada de LISTA DE ESPERA -->
+            <!-- Columna 2: Lista de Espera -->
             <div class="col-12 col-lg-6">
                 <div class="p-3 rounded-3 bg-dark border border-warning border-opacity-50 h-100">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h6 class="fw-bold text-warning mb-0">
-                            <i class="bi bi-hourglass-split me-1"></i> Cola de Lista de Espera ({{ clase.cantidad_lista_espera }})
+                            <i class="bi bi-hourglass-split me-1"></i> Alumnos en Lista de Espera ({{ clase.cantidad_lista_espera }})
                         </h6>
-                        <span class="small text-secondary">Orden correlativo estricto (#1, #2...)</span>
+                        <span class="small text-secondary">Ingreso automático al liberarse un cupo</span>
                     </div>
 
                     <div class="table-responsive">
                         <table class="table table-dark table-sm align-middle mb-0 small">
                             <thead>
                                 <tr class="text-secondary">
-                                    <th>Posición</th>
-                                    <th>Socio en Espera</th>
+                                    <th>Orden</th>
+                                    <th>Alumno</th>
                                     <th>RUT</th>
-                                    <th class="text-end">Acción</th>
+                                    <th class="text-end">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -162,23 +188,28 @@
                                 <tr>
                                     <td>
                                         <span class="badge {% if res.posicion_espera == 1 %}bg-warning text-dark{% else %}bg-secondary{% endif %} mono">
-                                            #{{ res.posicion_espera }} {% if res.posicion_espera == 1 %}(Siguiente en subir){% endif %}
+                                            #{{ res.posicion_espera }} {% if res.posicion_espera == 1 %}(Próximo en entrar){% endif %}
                                         </span>
                                     </td>
                                     <td class="fw-semibold">{{ res.socio.nombre_completo }}</td>
                                     <td class="mono text-secondary">{{ res.socio.rut }}</td>
                                     <td class="text-end">
-                                        <form method="post" action="{% url 'reserva_cancelar' res.pk %}" class="d-inline">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn btn-sm btn-outline-secondary py-0 px-2">
-                                                Retirar
-                                            </button>
-                                        </form>
+                                        <div class="d-inline-flex gap-1">
+                                            <a href="{% url 'socio_editar' res.socio.pk %}" class="btn btn-sm btn-outline-light py-0 px-2" title="Editar alumno">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <form method="post" action="{% url 'reserva_cancelar' res.pk %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary py-0 px-2">
+                                                    Retirar
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="4" class="text-center text-secondary py-3">No hay socios en lista de espera.</td>
+                                    <td colspan="4" class="text-center text-secondary py-3">Sin alumnos en lista de espera.</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -190,19 +221,19 @@
     </div>
     {% empty %}
     <div class="card card-fitlife p-5 text-center text-secondary">
-        No hay clases grupales creadas aún.
+        No hay clases programadas actualmente.
     </div>
     {% endfor %}
 </div>
 
-<!-- Modal Crear Clase Grupal -->
+<!-- Modal Crear Nueva Clase -->
 <div class="modal fade" id="modalCrearClase" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content card-fitlife">
             <form method="post" action="{% url 'clase_crear' %}">
                 {% csrf_token %}
                 <div class="modal-header border-secondary">
-                    <h5 class="modal-title fw-bold">Crear Nueva Clase Grupal</h5>
+                    <h5 class="modal-title fw-bold">Programar Nueva Clase Grupal</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -221,4 +252,56 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Registrar Nuevo Alumno e Inscribirlo en una Clase -->
+<div class="modal fade" id="modalNuevoAlumnoClase" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content card-fitlife">
+            <form method="post" action="{% url 'socio_rapido_clase' %}">
+                {% csrf_token %}
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title fw-bold" id="tituloModalAlumnoClase">Registrar Nuevo Alumno e Inscribir en Clase</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3 p-3 rounded-3 bg-dark border border-info border-opacity-50">
+                        <label class="form-label small text-info fw-bold">Clase a la que se inscribirá automáticamente:</label>
+                        <select name="clase_id" id="select-clase-nuevo-alumno" class="form-select bg-dark text-light border-secondary" required>
+                            {% for c in clases %}
+                            <option value="{{ c.pk }}">
+                                {{ c.nombre }} — {{ c.instructor }} ({{ c.cupos_ocupados }}/{{ c.cupo_maximo }} inscritos)
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="row g-3">
+                        {% for field in socio_form %}
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small text-secondary">{{ field.label }}</label>
+                            {{ field }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-emerald">Crear Alumno e Inscribir a la Clase</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function abrirModalNuevoAlumnoParaClase(claseId, claseNombre) {
+    const select = document.getElementById("select-clase-nuevo-alumno");
+    if (select) {
+        select.value = claseId;
+    }
+    const modal = new bootstrap.Modal(document.getElementById("modalNuevoAlumnoClase"));
+    modal.show();
+}
+</script>
 {% endblock %}

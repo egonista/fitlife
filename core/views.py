@@ -335,6 +335,7 @@ def gestion_clases_view(request):
             "socios": socios_activos,
             "clase_form": ClaseGrupalForm(),
             "reserva_form": ReservaClaseForm(),
+            "socio_form": SocioForm(),
         },
     )
 
@@ -451,14 +452,74 @@ def reserva_cancelar_view(request, pk):
         if estaba_confirmada and candidato_promocion:
             messages.success(
                 request,
-                f"Reserva de '{socio_cancelado}' en '{clase.nombre}' CANCELADA. "
-                f"⚡ PROMOCIÓN AUTOMÁTICA: '{candidato_promocion}' (Lista de Espera #1) "
-                f"pasó automáticamente a estado CONFIRMADA y se reordenaron las posiciones restantes.",
+                f"Cupo de '{socio_cancelado}' en '{clase.nombre}' liberado. "
+                f"'{candidato_promocion}' subió automáticamente desde la Lista de Espera (#1) a Confirmado.",
             )
         else:
             messages.info(
                 request,
-                f"Reserva de '{socio_cancelado}' en '{clase.nombre}' cancelada correctamente.",
+                f"Inscripción de '{socio_cancelado}' en '{clase.nombre}' cancelada correctamente.",
             )
 
     return redirect("gestion_clases")
+
+
+@login_required
+def reserva_asistencia_view(request, pk):
+    reserva = get_object_or_404(ReservaClase.objects.select_related('clase', 'socio'), pk=pk)
+    if request.method == "POST" and reserva.estado == "CONFIRMADA":
+        ReservaClase.objects.filter(pk=reserva.pk).update(estado="ASISTIO")
+        messages.success(
+            request,
+            f"Asistencia confirmada para '{reserva.socio.nombre_completo}' en '{reserva.clase.nombre}'.",
+        )
+    return redirect("gestion_clases")
+
+
+@login_required
+def socio_rapido_clase_view(request):
+    """Permite registrar un nuevo alumno/socio e inscribirlo de inmediato en una clase grupal."""
+    if request.method == "POST":
+        clase_id = request.POST.get("clase_id")
+        form = SocioForm(request.POST)
+        if form.is_valid():
+            with transaction.atomic():
+                socio = form.save()
+                if clase_id:
+                    clase = get_object_or_404(ClaseGrupal, pk=clase_id)
+                    try:
+                        reserva = ReservaClase.objects.create(clase=clase, socio=socio)
+                        estado_txt = (
+                            "con cupo CONFIRMADO"
+                            if reserva.estado == "CONFIRMADA"
+                            else f"en LISTA DE ESPERA (#{reserva.posicion_espera})"
+                        )
+                        messages.success(
+                            request,
+                            f"Alumno '{socio.nombre_completo}' creado e inscrito en '{clase.nombre}' {estado_txt}.",
+                        )
+                    except ValidationError as exc:
+                        msg = "; ".join(exc.messages) if hasattr(exc, "messages") else str(exc)
+                        messages.warning(
+                            request,
+                            f"Alumno '{socio.nombre_completo}' creado, pero no pudo inscribirse en la clase: {msg}",
+                        )
+                else:
+                    messages.success(request, f"Alumno '{socio.nombre_completo}' registrado correctamente.")
+        else:
+            messages.error(request, f"No se pudo registrar el alumno: {form.errors.as_text()}")
+    return redirect("gestion_clases")
+
+
+# ==========================================
+# 5. PÁGINA PERSONALIZADA DE ERROR 404
+# ==========================================
+
+def error_404_view(request, exception=None):
+    return render(
+        request,
+        "404.html",
+        status=404,
+    )
+
+

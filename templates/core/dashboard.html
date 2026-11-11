@@ -1,38 +1,37 @@
 {% extends "core/base.html" %}
 
-{% block title %}Dashboard de Aforo en Tiempo Real | FitLife{% endblock %}
+{% block title %}Panel de Sede | FitLife Gym{% endblock %}
 
 {% block content %}
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
     <div>
         <div class="d-flex align-items-center gap-2 mb-1">
             <span class="pulse-dot"></span>
-            <span class="text-success small fw-bold text-uppercase">Monitoreo en Tiempo Real (Polling cada 5s)</span>
-            <span class="badge bg-dark border border-secondary text-secondary mono" id="sync-timestamp">Sincronizado</span>
+            <span class="text-success small fw-bold text-uppercase">Estado Operativo en Vivo</span>
+            <span class="badge bg-dark border border-secondary text-secondary mono" id="sync-timestamp">En línea</span>
         </div>
-        <h2 class="fw-bold mb-0" id="sede-titulo">{{ estado_aforo.nombre_sede }} — Control de Aforo y Asistencia</h2>
+        <h2 class="fw-bold mb-0" id="sede-titulo">{{ estado_aforo.nombre_sede }}</h2>
     </div>
-    <div class="d-flex gap-2">
-        <button type="button" class="btn btn-sm btn-outline-light" onclick="actualizarDashboardAforo()">
-            <i class="bi bi-arrow-repeat me-1"></i> Actualizar Ahora
-        </button>
+    <div class="d-flex flex-wrap gap-2">
         <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#modalConfigAforo">
-            <i class="bi bi-sliders me-1"></i> Configurar Capacidad
+            <i class="bi bi-sliders me-1"></i> Capacidad de Sucursal
         </button>
+        <a href="{% url 'gestion_membresias' %}" class="btn btn-sm btn-outline-info">
+            <i class="bi bi-person-plus me-1"></i> Gestionar Alumnos
+        </a>
         <a href="{% url 'simulador_qr' %}" class="btn btn-sm btn-emerald">
-            <i class="bi bi-qr-code-scan me-1"></i> Ir al Torniquete QR
+            <i class="bi bi-qr-code-scan me-1"></i> Recepción y Torniquete
         </a>
     </div>
 </div>
 
-<!-- Fila Superior: Indicador Principal de Aforo + Resumen de Membresías -->
+<!-- Fila Superior: Ocupación de la Sede + Resumen de Alumnos -->
 <div class="row g-4 mb-4">
-    <!-- Tarjeta Principal de Aforo en Instalaciones -->
     <div class="col-12 col-xl-7">
         <div class="card card-fitlife p-4 h-100 border-success border-opacity-25">
             <div class="d-flex justify-content-between align-items-start mb-3">
                 <div>
-                    <span class="text-secondary small text-uppercase fw-bold">Personas Dentro del Gimnasio Ahora</span>
+                    <span class="text-secondary small text-uppercase fw-bold">Alumnos Entrenando Ahora en Sede</span>
                     <div class="d-flex align-items-baseline gap-2 mt-1">
                         <span class="display-4 fw-black text-light mono" id="aforo-actual">{{ estado_aforo.aforo_actual }}</span>
                         <span class="fs-4 text-secondary mono">/ <span id="aforo-maximo">{{ estado_aforo.aforo_maximo }}</span> máx.</span>
@@ -40,83 +39,80 @@
                 </div>
                 <div class="text-end">
                     <span id="badge-nivel-alerta" class="badge rounded-pill px-3 py-2 fs-6 {% if estado_aforo.nivel_alerta == 'CRITICO' %}bg-danger{% elif estado_aforo.nivel_alerta == 'ADVERTENCIA' %}bg-warning text-dark{% else %}bg-success{% endif %}">
-                        AFORO {{ estado_aforo.nivel_alerta }}
+                        OCUPACIÓN {{ estado_aforo.nivel_alerta }}
                     </span>
                     <div class="small text-secondary mt-2">
-                        Disponibles: <strong class="text-light mono" id="cupos-disponibles-gym">{{ estado_aforo.cupos_disponibles }}</strong> cupos
+                        Cupos libres en sala: <strong class="text-light mono" id="cupos-disponibles-gym">{{ estado_aforo.cupos_disponibles }}</strong>
                     </div>
                 </div>
             </div>
 
-            <!-- Barra de Capacidad Dinámica -->
             <div class="mb-2">
                 <div class="d-flex justify-content-between small mb-1">
-                    <span class="text-secondary">Porcentaje de Ocupación en Sala</span>
+                    <span class="text-secondary">Nivel de Ocupación Actual</span>
                     <span class="fw-bold mono" id="porcentaje-ocupacion">{{ estado_aforo.porcentaje_ocupacion }}%</span>
                 </div>
-                <div class="progress bg-dark border border-secondary" style="height: 22px; border-radius: 999px;">
+                <div class="progress bg-dark border border-secondary" style="height: 20px; border-radius: 999px;">
                     <div id="barra-aforo"
-                         class="progress-bar progress-bar-striped progress-bar-animated {% if estado_aforo.nivel_alerta == 'CRITICO' %}bg-danger{% elif estado_aforo.nivel_alerta == 'ADVERTENCIA' %}bg-warning text-dark{% else %}bg-success{% endif %}"
+                         class="progress-bar {% if estado_aforo.nivel_alerta == 'CRITICO' %}bg-danger{% elif estado_aforo.nivel_alerta == 'ADVERTENCIA' %}bg-warning text-dark{% else %}bg-success{% endif %}"
                          role="progressbar"
                          style="width: {{ estado_aforo.porcentaje_ocupacion }}%;">
                         {{ estado_aforo.porcentaje_ocupacion }}%
                     </div>
                 </div>
                 <div class="d-flex justify-content-between small text-secondary mt-2">
-                    <span>0% (Vacío)</span>
-                    <span>Umbral de Alerta: {{ estado_aforo.alerta_umbral_porcentaje }}%</span>
-                    <span>100% (Bloqueo Automático de Torniquete)</span>
+                    <span>0%</span>
+                    <span>Alerta preventiva: {{ estado_aforo.alerta_umbral_porcentaje }}%</span>
+                    <span>100% (Capacidad máxima)</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Tarjetas de Estado de Padrón de Socios -->
     <div class="col-12 col-xl-5">
         <div class="row g-3 h-100">
             <div class="col-6">
                 <div class="card card-fitlife p-3 h-100 border-start border-4 border-success">
-                    <div class="text-secondary small fw-semibold">Membresías Activas</div>
+                    <div class="text-secondary small fw-semibold">Alumnos Activos</div>
                     <div class="fs-2 fw-bold text-success mono mt-1" id="socios-activos">{{ resumen_socios.activos }}</div>
-                    <div class="small text-secondary"><i class="bi bi-check-circle me-1"></i>Acceso QR habilitado</div>
+                    <div class="small text-secondary"><i class="bi bi-check-circle me-1"></i>Plan al día</div>
                 </div>
             </div>
             <div class="col-6">
                 <div class="card card-fitlife p-3 h-100 border-start border-4 border-danger">
-                    <div class="text-secondary small fw-semibold">Membresías Vencidas</div>
+                    <div class="text-secondary small fw-semibold">Planes Vencidos</div>
                     <div class="fs-2 fw-bold text-danger mono mt-1" id="socios-vencidos">{{ resumen_socios.vencidos }}</div>
-                    <div class="small text-secondary"><i class="bi bi-x-octagon me-1"></i>Bloqueo en torniquete</div>
+                    <div class="small text-secondary"><i class="bi bi-exclamation-circle me-1"></i>Pendiente de pago</div>
                 </div>
             </div>
             <div class="col-6">
                 <div class="card card-fitlife p-3 h-100 border-start border-4 border-info">
-                    <div class="text-secondary small fw-semibold">Membresías Congeladas</div>
+                    <div class="text-secondary small fw-semibold">Planes Congelados</div>
                     <div class="fs-2 fw-bold text-info mono mt-1" id="socios-congelados">{{ resumen_socios.congelados }}</div>
-                    <div class="small text-secondary"><i class="bi bi-snow2 me-1"></i>Pausa temporal</div>
+                    <div class="small text-secondary"><i class="bi bi-pause-circle me-1"></i>Pausa médica/viaje</div>
                 </div>
             </div>
             <div class="col-6">
                 <div class="card card-fitlife p-3 h-100 border-start border-4 border-light">
-                    <div class="text-secondary small fw-semibold">Total Socios Registrados</div>
+                    <div class="text-secondary small fw-semibold">Total Alumnos</div>
                     <div class="fs-2 fw-bold text-light mono mt-1" id="socios-total">{{ resumen_socios.total }}</div>
-                    <div class="small"><a href="{% url 'gestion_membresias' %}" class="text-decoration-none text-info">Gestionar padrón &rarr;</a></div>
+                    <div class="small"><a href="{% url 'gestion_membresias' %}" class="text-decoration-none text-info">Ver directorio &rarr;</a></div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Fila Inferior: Bitácora QR en Milisegundos + Ocupación de Clases Grupales -->
+<!-- Fila Inferior: Ingresos Recientes + Clases del Día -->
 <div class="row g-4">
-    <!-- Últimos 10 Accesos QR con Latencia en ms -->
     <div class="col-12 col-lg-7">
         <div class="card card-fitlife p-4 h-100">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>
-                    <h5 class="fw-bold mb-0"><i class="bi bi-qr-code text-info me-2"></i>Bitácora de Accesos QR en Tiempo Real</h5>
-                    <small class="text-secondary">Últimas 10 validaciones en torniquete con tiempo de respuesta en milisegundos</small>
+                    <h5 class="fw-bold mb-0"><i class="bi bi-door-open text-info me-2"></i>Últimos Movimientos en Recepción</h5>
+                    <small class="text-secondary">Registro de entradas y salidas en el torniquete de acceso</small>
                 </div>
-                <a href="{% url 'simulador_qr' %}" class="btn btn-sm btn-outline-info">Simular Lectura QR</a>
+                <a href="{% url 'simulador_qr' %}" class="btn btn-sm btn-outline-info">Abrir Torniquete</a>
             </div>
 
             <div class="table-responsive">
@@ -124,10 +120,10 @@
                     <thead>
                         <tr class="text-secondary border-secondary">
                             <th>Hora</th>
-                            <th>Socio / RUT</th>
+                            <th>Alumno / RUT</th>
                             <th>Movimiento</th>
-                            <th>Resultado</th>
-                            <th class="text-end">Latencia</th>
+                            <th>Estado Acceso</th>
+                            <th class="text-end">Lectura</th>
                         </tr>
                     </thead>
                     <tbody id="tabla-ultimos-accesos">
@@ -139,7 +135,7 @@
                                     <div class="fw-semibold">{{ acc.socio.nombre_completo }}</div>
                                     <div class="text-secondary mono" style="font-size: 11px;">{{ acc.socio.rut }}</div>
                                 {% else %}
-                                    <div class="text-warning fw-semibold">QR No Reconocido</div>
+                                    <div class="text-warning fw-semibold">Código No Registrado</div>
                                     <div class="text-secondary mono" style="font-size: 11px;">{{ acc.codigo_qr_leido|truncatechars:18 }}</div>
                                 {% endif %}
                             </td>
@@ -150,16 +146,16 @@
                             </td>
                             <td>
                                 {% if acc.resultado == 'PERMITIDO' %}
-                                    <span class="badge bg-success-subtle text-success border border-success">PERMITIDO</span>
+                                    <span class="badge bg-success-subtle text-success border border-success">AUTORIZADO</span>
                                 {% else %}
                                     <span class="badge bg-danger-subtle text-danger border border-danger">{{ acc.get_resultado_display }}</span>
                                 {% endif %}
                             </td>
-                            <td class="text-end mono fw-bold text-success">{{ acc.tiempo_respuesta_ms|floatformat:2 }} ms</td>
+                            <td class="text-end mono text-secondary">{{ acc.tiempo_respuesta_ms|floatformat:1 }} ms</td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="5" class="text-center text-secondary py-4">No hay lecturas QR registradas aún.</td>
+                            <td colspan="5" class="text-center text-secondary py-4">Sin movimientos registrados hoy.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -168,21 +164,20 @@
         </div>
     </div>
 
-    <!-- Estado de Cupos y Lista de Espera en Clases Grupales -->
     <div class="col-12 col-lg-5">
         <div class="card card-fitlife p-4 h-100">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>
-                    <h5 class="fw-bold mb-0"><i class="bi bi-calendar2-week text-warning me-2"></i>Ocupación de Clases Grupales</h5>
-                    <small class="text-secondary">Control de cupos confirmados y cola de lista de espera</small>
+                    <h5 class="fw-bold mb-0"><i class="bi bi-calendar2-week text-warning me-2"></i>Próximas Clases Grupales</h5>
+                    <small class="text-secondary">Alumnos inscritos y lista de espera por sala</small>
                 </div>
-                <a href="{% url 'gestion_clases' %}" class="btn btn-sm btn-outline-warning">Gestionar Cupos</a>
+                <a href="{% url 'gestion_clases' %}" class="btn btn-sm btn-outline-warning">Inscribir Alumnos</a>
             </div>
 
             <div id="contenedor-clases-dashboard" class="d-flex flex-column gap-3">
                 {% for clase in clases_grupales %}
                 <div class="p-3 rounded-3 bg-dark border border-secondary">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
                         <div>
                             <div class="fw-bold text-light">{{ clase.nombre }}</div>
                             <div class="small text-secondary">
@@ -193,12 +188,12 @@
                         </div>
                         <div class="text-end">
                             <span class="badge {% if clase.cupos_disponibles == 0 %}bg-danger{% else %}bg-success{% endif %} mono">
-                                {{ clase.cupos_ocupados }} / {{ clase.cupo_maximo }} cupos
+                                {{ clase.cupos_ocupados }} / {{ clase.cupo_maximo }} inscritos
                             </span>
                             {% if clase.cantidad_lista_espera > 0 %}
                                 <div class="mt-1">
                                     <span class="badge bg-warning text-dark">
-                                        <i class="bi bi-hourglass-split"></i> {{ clase.cantidad_lista_espera }} en Lista de Espera
+                                        <i class="bi bi-hourglass-split"></i> {{ clase.cantidad_lista_espera }} en espera
                                     </span>
                                 </div>
                             {% endif %}
@@ -206,40 +201,40 @@
                     </div>
                 </div>
                 {% empty %}
-                <div class="text-center text-secondary py-4">No hay clases grupales activas.</div>
+                <div class="text-center text-secondary py-4">No hay clases programadas.</div>
                 {% endfor %}
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal Configuración de Aforo -->
+<!-- Modal Configuración de Capacidad -->
 <div class="modal fade" id="modalConfigAforo" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content card-fitlife">
-            <form method="post" action="{% url 'actualizar_aforo_view' as url_af %}{% url 'actualizar_aforo' %}">
+            <form method="post" action="{% url 'actualizar_aforo' %}">
                 {% csrf_token %}
                 <div class="modal-header border-secondary">
-                    <h5 class="modal-title fw-bold"><i class="bi bi-sliders text-warning me-2"></i>Configurar Aforo de Sede</h5>
+                    <h5 class="modal-title fw-bold"><i class="bi bi-sliders text-warning me-2"></i>Capacidad de la Sucursal</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label small text-secondary">Nombre de la Sede</label>
+                        <label class="form-label small text-secondary">Nombre de la Sucursal</label>
                         {{ aforo_form.nombre_sede }}
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small text-secondary">Aforo Máximo Permitido (Personas)</label>
+                        <label class="form-label small text-secondary">Capacidad Máxima de Alumnos</label>
                         {{ aforo_form.aforo_maximo }}
                     </div>
                     <div class="mb-2">
-                        <label class="form-label small text-secondary">Umbral de Alerta Preventiva (%)</label>
+                        <label class="form-label small text-secondary">Aviso de Alta Ocupación (%)</label>
                         {{ aforo_form.alerta_umbral_porcentaje }}
                     </div>
                 </div>
                 <div class="modal-footer border-secondary">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-emerald">Guardar Parámetros</button>
+                    <button type="submit" class="btn btn-emerald">Guardar Cambios</button>
                 </div>
             </form>
         </div>
@@ -257,30 +252,28 @@ async function actualizarDashboardAforo() {
         if (!resp.ok) return;
         const data = await resp.json();
 
-        document.getElementById("sede-titulo").textContent = `${data.nombre_sede} — Control de Aforo y Asistencia`;
+        document.getElementById("sede-titulo").textContent = data.nombre_sede;
         document.getElementById("aforo-actual").textContent = data.aforo_actual;
         document.getElementById("aforo-maximo").textContent = data.aforo_maximo;
         document.getElementById("cupos-disponibles-gym").textContent = data.cupos_disponibles_gimnasio;
         document.getElementById("porcentaje-ocupacion").textContent = `${data.porcentaje_ocupacion}%`;
-        document.getElementById("sync-timestamp").textContent = `Actualizado ${data.timestamp_servidor}`;
+        document.getElementById("sync-timestamp").textContent = `Hora: ${data.timestamp_servidor}`;
 
-        // Actualizar barra y alerta
         const barra = document.getElementById("barra-aforo");
         barra.style.width = `${data.porcentaje_ocupacion}%`;
         barra.textContent = `${data.porcentaje_ocupacion}%`;
-        barra.className = "progress-bar progress-bar-striped progress-bar-animated " + (
+        barra.className = "progress-bar " + (
             data.nivel_alerta === "CRITICO" ? "bg-danger" :
             data.nivel_alerta === "ADVERTENCIA" ? "bg-warning text-dark" : "bg-success"
         );
 
         const badgeAlerta = document.getElementById("badge-nivel-alerta");
-        badgeAlerta.textContent = `AFORO ${data.nivel_alerta}`;
+        badgeAlerta.textContent = `OCUPACIÓN ${data.nivel_alerta}`;
         badgeAlerta.className = "badge rounded-pill px-3 py-2 fs-6 " + (
             data.nivel_alerta === "CRITICO" ? "bg-danger" :
             data.nivel_alerta === "ADVERTENCIA" ? "bg-warning text-dark" : "bg-success"
         );
 
-        // Resumen socios
         if (data.resumen_socios) {
             document.getElementById("socios-activos").textContent = data.resumen_socios.activos;
             document.getElementById("socios-vencidos").textContent = data.resumen_socios.vencidos;
@@ -288,7 +281,6 @@ async function actualizarDashboardAforo() {
             document.getElementById("socios-total").textContent = data.resumen_socios.total;
         }
 
-        // Actualizar tabla de últimos accesos QR
         const tbody = document.getElementById("tabla-ultimos-accesos");
         if (data.ultimos_accesos && data.ultimos_accesos.length > 0) {
             tbody.innerHTML = data.ultimos_accesos.map(acc => `
@@ -305,20 +297,19 @@ async function actualizarDashboardAforo() {
                     </td>
                     <td>
                         <span class="badge ${acc.permitido ? 'bg-success-subtle text-success border border-success' : 'bg-danger-subtle text-danger border border-danger'}">
-                            ${acc.resultado_display}
+                            ${acc.permitido ? 'AUTORIZADO' : acc.resultado_display}
                         </span>
                     </td>
-                    <td class="text-end mono fw-bold text-success">${acc.tiempo_respuesta_ms.toFixed(2)} ms</td>
+                    <td class="text-end mono text-secondary">${acc.tiempo_respuesta_ms.toFixed(1)} ms</td>
                 </tr>
             `).join("");
         }
 
-        // Actualizar ocupación de clases grupales
         const contClases = document.getElementById("contenedor-clases-dashboard");
         if (data.clases_grupales && data.clases_grupales.length > 0) {
             contClases.innerHTML = data.clases_grupales.map(c => `
                 <div class="p-3 rounded-3 bg-dark border border-secondary">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
                         <div>
                             <div class="fw-bold text-light">${c.nombre}</div>
                             <div class="small text-secondary">
@@ -329,12 +320,12 @@ async function actualizarDashboardAforo() {
                         </div>
                         <div class="text-end">
                             <span class="badge ${c.cupos_disponibles === 0 ? 'bg-danger' : 'bg-success'} mono">
-                                ${c.cupos_ocupados} / ${c.cupo_maximo} cupos
+                                ${c.cupos_ocupados} / ${c.cupo_maximo} inscritos
                             </span>
                             ${c.cantidad_lista_espera > 0 ? `
                                 <div class="mt-1">
                                     <span class="badge bg-warning text-dark">
-                                        <i class="bi bi-hourglass-split"></i> ${c.cantidad_lista_espera} en Lista de Espera
+                                        <i class="bi bi-hourglass-split"></i> ${c.cantidad_lista_espera} en espera
                                     </span>
                                 </div>
                             ` : ''}
@@ -344,11 +335,10 @@ async function actualizarDashboardAforo() {
             `).join("");
         }
     } catch (err) {
-        console.error("Error actualizando dashboard en tiempo real:", err);
+        console.error(err);
     }
 }
 
-// Polling automático cada 5 segundos
 setInterval(actualizarDashboardAforo, 5000);
 </script>
 {% endblock %}

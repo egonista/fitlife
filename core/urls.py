@@ -54,6 +54,8 @@ urlpatterns = [
     path('clases/<int:pk>/eliminar/', views.clase_eliminar_view, name='clase_eliminar'),
     path('reservas/crear/', views.reserva_crear_view, name='reserva_crear'),
     path('reservas/<int:pk>/cancelar/', views.reserva_cancelar_view, name='reserva_cancelar'),
+    path('reservas/<int:pk>/asistencia/', views.reserva_asistencia_view, name='reserva_asistencia'),
+    path('clases/nuevo-alumno/', views.socio_rapido_clase_view, name='socio_rapido_clase'),
 
     # Endpoints API REST (Django REST Framework)
     path('api/accesos/validar-qr/', api_views.ValidarAccesoQRAPIView.as_view(), name='api_validar_qr'),

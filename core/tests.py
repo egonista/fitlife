@@ -242,4 +242,11 @@ class FitLifeDomainModelTests(TestCase):
             r = self.client.get(reverse(url_name))
             self.assertEqual(r.status_code, 200)
 
+        # 7. Verificar página personalizada de Error 404
+        r_404 = self.client.get("/simulador-qr/404")
+        self.assertEqual(r_404.status_code, 404)
+        self.assertContains(r_404, "Página no disponible", status_code=404)
+        self.assertContains(r_404, "Volver al Inicio", status_code=404)
+
+
 

@@ -1,0 +1,55 @@
+{% extends "core/base.html" %}
+
+{% block title %}Página no encontrada | FitLife{% endblock %}
+
+{% block extra_css %}
+<style>
+    .error-404-wrapper {
+        min-height: 78vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .error-404-card {
+        background: radial-gradient(circle at top, rgba(16, 185, 129, 0.10), transparent 60%), #111827;
+        border: 1px solid #1f2937;
+        border-radius: 20px;
+        max-width: 480px;
+        width: 100%;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+    }
+    .error-code-display {
+        font-size: 5.5rem;
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: -3px;
+        background: linear-gradient(135deg, #10b981 0%, #38bdf8 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="error-404-wrapper px-3">
+    <div class="error-404-card p-5 text-center">
+        <div class="mb-3">
+            <span class="brand-badge fs-6 d-inline-block"><i class="bi bi-lightning-charge-fill"></i> FITLIFE GYM</span>
+        </div>
+        <div class="error-code-display mono mb-2">404</div>
+        <h4 class="fw-bold text-light mb-2">Página no disponible</h4>
+        <p class="text-secondary small mb-4">
+            La dirección a la que intentas acceder no existe o no se encuentra disponible en este momento.
+        </p>
+        {% if user.is_authenticated %}
+            <a href="{% url 'dashboard' %}" class="btn btn-emerald w-100 py-2">
+                <i class="bi bi-arrow-left me-1"></i> Volver al Inicio
+            </a>
+        {% else %}
+            <a href="{% url 'login' %}" class="btn btn-emerald w-100 py-2">
+                <i class="bi bi-arrow-left me-1"></i> Volver al Inicio
+            </a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
