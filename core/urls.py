@@ -35,6 +35,11 @@ urlpatterns = [
     # Simulador de Acceso QR en milisegundos
     path('simulador-qr/', views.simulador_qr_view, name='simulador_qr'),
     path('socios/<int:pk>/qr.png', views.socio_qr_png_view, name='socio_qr_png'),
+    path('socios/<int:pk>/credencial/', views.socio_credencial_view, name='socio_credencial'),
+
+    # Exportación de Reportes Excel (CSV)
+    path('reportes/accesos.csv', views.exportar_accesos_csv_view, name='exportar_accesos_csv'),
+    path('reportes/pagos.csv', views.exportar_pagos_csv_view, name='exportar_pagos_csv'),
 
     # Gestión CRUD: Planes, Socios y Pagos
     path('membresias/', views.gestion_membresias_view, name='gestion_membresias'),

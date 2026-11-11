@@ -7,6 +7,7 @@ from .models import (
     ClaseGrupal,
     ReservaClase,
 )
+from .validators import validar_y_formatear_rut
 
 
 class BootstrapFormMixin:
@@ -47,13 +48,17 @@ class SocioForm(BootstrapFormMixin, forms.ModelForm):
             'fecha_vencimiento',
         ]
         widgets = {
-            'rut': forms.TextInput(attrs={'placeholder': 'Ej. 18.456.789-K'}),
+            'rut': forms.TextInput(attrs={'placeholder': 'Ej. 18.234.567-9', 'class': 'input-rut-chileno'}),
             'nombre_completo': forms.TextInput(attrs={'placeholder': 'Nombre y Apellidos'}),
             'email': forms.EmailInput(attrs={'placeholder': 'socio@correo.cl'}),
             'telefono': forms.TextInput(attrs={'placeholder': '+56 9 1234 5678'}),
             'fecha_inicio': forms.DateInput(attrs={'type': 'date'}),
             'fecha_vencimiento': forms.DateInput(attrs={'type': 'date'}),
         }
+
+    def clean_rut(self):
+        rut = self.cleaned_data.get('rut', '')
+        return validar_y_formatear_rut(rut)
 
 
 class PagoMembresiaForm(BootstrapFormMixin, forms.ModelForm):

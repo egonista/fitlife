@@ -12,9 +12,11 @@
         <button type="button" class="btn btn-sm btn-info fw-bold text-dark" data-bs-toggle="modal" data-bs-target="#modalNuevoAlumnoClase">
             <i class="bi bi-person-plus-fill me-1"></i> Registrar Nuevo Alumno e Inscribir
         </button>
+        {% if user.is_superuser %}
         <button type="button" class="btn btn-sm btn-emerald" data-bs-toggle="modal" data-bs-target="#modalCrearClase">
             <i class="bi bi-plus-circle me-1"></i> Crear Nueva Clase
         </button>
+        {% endif %}
     </div>
 </div>
 
@@ -50,6 +52,7 @@
                         onclick="abrirModalNuevoAlumnoParaClase('{{ clase.pk }}', '{{ clase.nombre|escapejs }}')">
                     <i class="bi bi-person-plus me-1"></i> Crear Alumno para esta Clase
                 </button>
+                {% if user.is_superuser %}
                 <a href="{% url 'clase_editar' clase.pk %}" class="btn btn-sm btn-outline-light">
                     <i class="bi bi-pencil me-1"></i> Editar Clase
                 </a>
@@ -59,6 +62,7 @@
                         <i class="bi bi-trash"></i>
                     </button>
                 </form>
+                {% endif %}
             </div>
         </div>
 

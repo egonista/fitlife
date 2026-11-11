@@ -248,5 +248,31 @@ class FitLifeDomainModelTests(TestCase):
         self.assertContains(r_404, "Página no disponible", status_code=404)
         self.assertContains(r_404, "Volver al Inicio", status_code=404)
 
+        # 8. Verificar Credencial Digital del Alumno y Exportación Excel (CSV)
+        r_cred = self.client.get(reverse("socio_credencial", args=[s_activo.pk]))
+        self.assertEqual(r_cred.status_code, 200)
+        self.assertContains(r_cred, s_activo.nombre_completo)
+
+        r_csv_acc = self.client.get(reverse("exportar_accesos_csv"))
+        self.assertEqual(r_csv_acc.status_code, 200)
+        self.assertEqual(r_csv_acc["Content-Type"], "text/csv; charset=utf-8")
+
+        r_csv_pag = self.client.get(reverse("exportar_pagos_csv"))
+        self.assertEqual(r_csv_pag.status_code, 200)
+        self.assertEqual(r_csv_pag["Content-Type"], "text/csv; charset=utf-8")
+
+        # 9. Verificar restricción de permisos para rol Recepción (no superusuario)
+        r_del_plan = self.client.post(reverse("plan_eliminar", args=[self.plan.pk]))
+        self.assertEqual(r_del_plan.status_code, 302)
+        self.assertTrue(PlanMembresia.objects.filter(pk=self.plan.pk).exists())
+
+    def test_validador_rut_chileno_modulo_11(self):
+        from .validators import validar_y_formatear_rut
+        self.assertEqual(validar_y_formatear_rut("182345679"), "18.234.567-9")
+        self.assertEqual(validar_y_formatear_rut("16.543.210-k"), "16.543.210-K")
+        with self.assertRaises(ValidationError):
+            validar_y_formatear_rut("18.234.567-0")
+
+
 
 

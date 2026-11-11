@@ -1,0 +1,121 @@
+{% extends "core/base.html" %}
+
+{% block title %}Credencial Digital — {{ socio.nombre_completo }} | FitLife Gym{% endblock %}
+
+{% block extra_css %}
+<style>
+    .credencial-card {
+        max-width: 440px;
+        margin: 0 auto;
+        background: linear-gradient(155deg, #0f172a 0%, #111827 55%, #064e3b 100%);
+        border: 2px solid rgba(16, 185, 129, 0.55);
+        border-radius: 24px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+        overflow: hidden;
+        position: relative;
+    }
+    .credencial-header {
+        background: rgba(2, 44, 34, 0.65);
+        border-bottom: 1px solid rgba(16, 185, 129, 0.3);
+        padding: 20px 24px;
+    }
+    .avatar-circle {
+        width: 68px;
+        height: 68px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #10b981, #06b6d4);
+        color: #022c22;
+        font-size: 28px;
+        font-weight: 900;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+    }
+    @media print {
+        nav, footer, .no-print {
+            display: none !important;
+        }
+        body {
+            background: #ffffff !important;
+        }
+        .credencial-card {
+            box-shadow: none !important;
+            border: 2px solid #0f172a !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+    <div class="d-flex justify-content-between align-items-center mb-4 no-print" style="max-width: 440px; margin: 0 auto;">
+        <a href="{% url 'gestion_membresias' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Volver a Alumnos
+        </a>
+        <div class="d-flex gap-2">
+            <a href="{% url 'socio_qr_png' socio.pk %}" download="qr_{{ socio.rut }}.png" class="btn btn-sm btn-outline-info">
+                <i class="bi bi-download me-1"></i> Descargar QR
+            </a>
+            <button type="button" onclick="window.print()" class="btn btn-sm btn-emerald">
+                <i class="bi bi-printer-fill me-1"></i> Imprimir Credencial
+            </button>
+        </div>
+    </div>
+
+    <div class="credencial-card">
+        <div class="credencial-header d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <span class="brand-badge"><i class="bi bi-lightning-charge-fill"></i> FITLIFE GYM</span>
+            </div>
+            {% if socio.estado_membresia == 'ACTIVA' %}
+                <span class="badge bg-success px-3 py-2 rounded-pill">MEMBRESÍA ACTIVA</span>
+            {% elif socio.estado_membresia == 'VENCIDA' %}
+                <span class="badge bg-danger px-3 py-2 rounded-pill">MEMBRESÍA VENCIDA</span>
+            {% else %}
+                <span class="badge bg-info text-dark px-3 py-2 rounded-pill">MEMBRESÍA CONGELADA</span>
+            {% endif %}
+        </div>
+
+        <div class="p-4 text-center">
+            <div class="avatar-circle mb-3">
+                {{ socio.nombre_completo|slice:":1"|upper }}
+            </div>
+            <h4 class="fw-bold text-white mb-1">{{ socio.nombre_completo }}</h4>
+            <div class="mono text-info fw-semibold mb-3">RUT: {{ socio.rut }}</div>
+
+            <!-- Código QR de Torniquete -->
+            <div class="p-3 bg-white rounded-4 d-inline-block shadow mb-3">
+                <img src="data:image/png;base64,{{ socio.qr_base64 }}"
+                     alt="Código QR {{ socio.nombre_completo }}"
+                     style="width: 185px; height: 185px; object-fit: contain;">
+            </div>
+            <div class="small text-secondary mb-4">
+                Presenta este código QR en el lector óptico de recepción para ingresar a la sucursal
+            </div>
+
+            <!-- Detalles del Plan -->
+            <div class="p-3 rounded-3 bg-dark bg-opacity-75 border border-secondary text-start small">
+                <div class="d-flex justify-content-between py-1 border-bottom border-secondary border-opacity-25">
+                    <span class="text-secondary">Plan Contratado:</span>
+                    <strong class="text-light">{{ socio.plan.nombre }}</strong>
+                </div>
+                <div class="d-flex justify-content-between py-1 border-bottom border-secondary border-opacity-25">
+                    <span class="text-secondary">Fecha de Inicio:</span>
+                    <span class="mono text-light">{{ socio.fecha_inicio|date:"d/m/Y" }}</span>
+                </div>
+                <div class="d-flex justify-content-between py-1 border-bottom border-secondary border-opacity-25">
+                    <span class="text-secondary">Válido Hasta:</span>
+                    <strong class="mono {% if socio.estado_membresia == 'VENCIDA' %}text-danger{% else %}text-success{% endif %}">
+                        {{ socio.fecha_vencimiento|date:"d/m/Y" }}
+                    </strong>
+                </div>
+                <div class="d-flex justify-content-between pt-1">
+                    <span class="text-secondary">Clases Grupales:</span>
+                    <span class="text-info">{% if socio.plan.acceso_clases_grupales %}Incluidas{% else %}No incluidas{% endif %}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -8,8 +8,11 @@
         <span class="text-info small fw-bold text-uppercase"><i class="bi bi-qr-code-scan me-1"></i>Control de Ingreso a Sucursal</span>
         <h2 class="fw-bold mb-0">Recepción y Torniquete de Acceso</h2>
     </div>
-    <div class="d-flex align-items-center gap-3">
-        <div class="px-3 py-2 rounded-pill bg-dark border border-secondary">
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <button type="button" id="btn-toggle-sonido" class="btn btn-sm btn-outline-success rounded-pill" onclick="toggleSonidoTorniquete()">
+            <i class="bi bi-volume-up-fill me-1" id="icono-sonido"></i> <span id="texto-sonido">Sonido Torniquete: ON</span>
+        </button>
+        <div class="px-3 py-1 rounded-pill bg-dark border border-secondary">
             <span class="text-secondary small me-2">Personas en Sala:</span>
             <strong class="mono text-success" id="sim-aforo-actual">{{ estado_aforo.aforo_actual }}</strong>
             <span class="mono text-secondary">/ <span id="sim-aforo-maximo">{{ estado_aforo.aforo_maximo }}</span></span>
@@ -33,7 +36,7 @@
                 <input type="text" id="filtro-alumnos-qr" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Buscar alumno por nombre o RUT..." onkeyup="filtrarAlumnosQR()">
             </div>
 
-            <div class="d-flex flex-column gap-2 overflow-auto" style="max-height: 500px;" id="lista-alumnos-qr">
+            <div class="d-flex flex-column gap-2 overflow-auto" style="max-height: 520px;" id="lista-alumnos-qr">
                 {% for socio in socios %}
                 <div class="p-3 rounded-3 bg-dark border border-secondary socio-selector-card item-alumno-qr"
                      data-busqueda="{{ socio.nombre_completo|lower }} {{ socio.rut|lower }}"
@@ -58,8 +61,11 @@
                             <div class="small text-secondary">
                                 RUT: <span class="mono">{{ socio.rut }}</span> &bull; {{ socio.plan.nombre }}
                             </div>
-                            <div class="small text-secondary">
-                                Vencimiento: <span class="mono">{{ socio.fecha_vencimiento|date:"d/m/Y" }}</span>
+                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                <span class="small text-secondary">Vence: <span class="mono">{{ socio.fecha_vencimiento|date:"d/m/Y" }}</span></span>
+                                <a href="{% url 'socio_credencial' socio.pk %}" class="badge bg-dark border border-info text-info text-decoration-none" onclick="event.stopPropagation();">
+                                    <i class="bi bi-person-badge"></i> Ver Carnet
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -93,10 +99,23 @@
                 </div>
 
                 <div class="col-12 col-md-8">
-                    <h5 class="fw-bold mb-2"><i class="bi bi-upc-scan text-info me-2"></i>Lector Óptico de Torniquete</h5>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="fw-bold mb-0"><i class="bi bi-upc-scan text-info me-2"></i>Lector Óptico de Torniquete</h5>
+                        <button type="button" id="btn-camara-qr" class="btn btn-sm btn-outline-warning" onclick="alternarCamaraQR()">
+                            <i class="bi bi-camera-video me-1"></i> Escanear con Cámara
+                        </button>
+                    </div>
                     <p class="text-secondary small mb-3">
-                        Escanea o selecciona la credencial digital del alumno para autorizar su entrada o registrar su salida del gimnasio.
+                        Escanea con la cámara o selecciona la credencial digital del alumno para autorizar su entrada o registrar su salida.
                     </p>
+
+                    <!-- Contenedor de Cámara Web en Vivo (oculto por defecto) -->
+                    <div id="contenedor-camara-qr" class="mb-3 d-none">
+                        <div id="lector-camara-qr" class="rounded-3 overflow-hidden border border-warning"></div>
+                        <div class="small text-warning text-center mt-1">
+                            Acerca el código QR del alumno (desde el celular o carnet) frente a la cámara
+                        </div>
+                    </div>
 
                     <div class="mb-3">
                         <label class="form-label small text-secondary fw-semibold">Código de Credencial Digital</label>
@@ -151,7 +170,12 @@
 
         <!-- Registro Reciente -->
         <div class="card card-fitlife p-4">
-            <h6 class="fw-bold mb-3"><i class="bi bi-clock-history text-secondary me-2"></i>Últimos Accesos en Recepción</h6>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold mb-0"><i class="bi bi-clock-history text-secondary me-2"></i>Últimos Accesos en Recepción</h6>
+                <a href="{% url 'exportar_accesos_csv' %}" class="btn btn-sm btn-outline-success py-0 px-2">
+                    <i class="bi bi-file-earmark-spreadsheet me-1"></i> Descargar Excel
+                </a>
+            </div>
             <div class="table-responsive">
                 <table class="table table-dark table-sm align-middle mb-0 small">
                     <thead>
@@ -188,7 +212,108 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
+let sonidoActivo = true;
+let escanerCamara = null;
+let camaraEncendida = false;
+
+function toggleSonidoTorniquete() {
+    sonidoActivo = !sonidoActivo;
+    const btn = document.getElementById("btn-toggle-sonido");
+    const icono = document.getElementById("icono-sonido");
+    const texto = document.getElementById("texto-sonido");
+    if (sonidoActivo) {
+        btn.className = "btn btn-sm btn-outline-success rounded-pill";
+        icono.className = "bi bi-volume-up-fill me-1";
+        texto.textContent = "Sonido Torniquete: ON";
+    } else {
+        btn.className = "btn btn-sm btn-outline-secondary rounded-pill";
+        icono.className = "bi bi-volume-mute-fill me-1";
+        texto.textContent = "Sonido Torniquete: OFF";
+    }
+}
+
+function reproducirSonidoTorniquete(autorizado) {
+    if (!sonidoActivo) return;
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioCtx();
+
+        if (autorizado) {
+            // Doble bip agudo de torniquete liberado (880Hz -> 1320Hz)
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            osc.frequency.setValueAtTime(1320, ctx.currentTime + 0.09);
+            gain.gain.setValueAtTime(0.18, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.26);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.26);
+        } else {
+            // Alarma grave doble de bloqueo (210Hz -> 150Hz)
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = "sawtooth";
+            osc.frequency.setValueAtTime(210, ctx.currentTime);
+            osc.frequency.setValueAtTime(150, ctx.currentTime + 0.16);
+            gain.gain.setValueAtTime(0.20, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.38);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.38);
+        }
+    } catch (e) {
+        console.warn("AudioContext no disponible:", e);
+    }
+}
+
+async function alternarCamaraQR() {
+    const contenedor = document.getElementById("contenedor-camara-qr");
+    const btn = document.getElementById("btn-camara-qr");
+
+    if (!camaraEncendida) {
+        contenedor.classList.remove("d-none");
+        btn.innerHTML = '<i class="bi bi-stop-circle me-1"></i> Detener Cámara';
+        btn.className = "btn btn-sm btn-danger";
+
+        escanerCamara = new Html5Qrcode("lector-camara-qr");
+        try {
+            await escanerCamara.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 220, height: 220 } },
+                (decodedText) => {
+                    document.getElementById("input-token-qr").value = decodedText.trim();
+                    ejecutarValidacionQR("ENTRADA");
+                    alternarCamaraQR();
+                },
+                () => {}
+            );
+            camaraEncendida = true;
+        } catch (err) {
+            contenedor.classList.add("d-none");
+            btn.innerHTML = '<i class="bi bi-camera-video me-1"></i> Escanear con Cámara';
+            btn.className = "btn btn-sm btn-outline-warning";
+            alert("No se pudo acceder a la cámara web en este dispositivo.");
+        }
+    } else {
+        if (escanerCamara) {
+            try {
+                await escanerCamara.stop();
+                escanerCamara.clear();
+            } catch (e) {}
+        }
+        camaraEncendida = false;
+        contenedor.classList.add("d-none");
+        btn.innerHTML = '<i class="bi bi-camera-video me-1"></i> Escanear con Cámara';
+        btn.className = "btn btn-sm btn-outline-warning";
+    }
+}
+
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -241,6 +366,8 @@ async function ejecutarValidacionQR(tipoMovimiento) {
         });
         const data = await resp.json();
 
+        reproducirSonidoTorniquete(data.permitido);
+
         document.getElementById("sim-aforo-actual").textContent = data.aforo_actual;
         document.getElementById("sim-aforo-maximo").textContent = data.aforo_maximo;
 
@@ -265,8 +392,7 @@ async function ejecutarValidacionQR(tipoMovimiento) {
             card.className = "card card-fitlife p-4 mb-4 border-2 border-danger bg-danger bg-opacity-10";
             icono.className = "rounded-circle bg-danger text-white d-flex align-items-center justify-content-center";
             icono.innerHTML = '<i class="bi bi-x-lg"></i>';
-            titulo.className = "fw-black mb-1 text-danger";
-            titulo.textContent = `ACCESO DENEGADO (${data.resultado_display})`;
+            titulo.textContent = "ACCESO DENEGADO (" + data.resultado_display + ")";
         }
 
         const tbody = document.getElementById("tabla-historial-simulador");

@@ -96,9 +96,9 @@ class Command(BaseCommand):
                 activo=True,
             )
 
-            # 4. Socios de Prueba (inicialmente creados con fecha vigente para registrar reservas previas)
+            # 4. Socios de Prueba (con RUT chileno Módulo 11 válido)
             s_camila = Socio.objects.create(
-                rut="18.234.567-8",
+                rut="18.234.567-9",
                 nombre_completo="Camila Rojas",
                 email="camila.rojas@fitlife.cl",
                 telefono="+56 9 8111 2233",
@@ -108,7 +108,7 @@ class Command(BaseCommand):
                 fecha_vencimiento=hoy + timedelta(days=325),
             )
             s_matias = Socio.objects.create(
-                rut="19.876.543-2",
+                rut="19.876.543-0",
                 nombre_completo="Matías Fernández",
                 email="matias.fernandez@fitlife.cl",
                 telefono="+56 9 8222 3344",
@@ -118,7 +118,7 @@ class Command(BaseCommand):
                 fecha_vencimiento=hoy + timedelta(days=75),
             )
             s_valentina = Socio.objects.create(
-                rut="20.456.789-K",
+                rut="20.456.789-1",
                 nombre_completo="Valentina Soto",
                 email="valentina.soto@fitlife.cl",
                 telefono="+56 9 8333 4455",
@@ -128,7 +128,7 @@ class Command(BaseCommand):
                 fecha_vencimiento=hoy + timedelta(days=25),
             )
             s_diego = Socio.objects.create(
-                rut="16.543.210-1",
+                rut="16.543.210-K",
                 nombre_completo="Diego Morales",
                 email="diego.morales@fitlife.cl",
                 telefono="+56 9 8444 5566",
@@ -138,7 +138,7 @@ class Command(BaseCommand):
                 fecha_vencimiento=hoy + timedelta(days=5),
             )
             s_francisca = Socio.objects.create(
-                rut="17.654.321-9",
+                rut="17.654.321-3",
                 nombre_completo="Francisca Herrera",
                 email="francisca.herrera@fitlife.cl",
                 telefono="+56 9 8555 6677",
@@ -148,7 +148,7 @@ class Command(BaseCommand):
                 fecha_vencimiento=hoy + timedelta(days=5),
             )
             s_sebastian = Socio.objects.create(
-                rut="15.321.654-4",
+                rut="15.321.654-1",
                 nombre_completo="Sebastián Vargas",
                 email="sebastian.vargas@fitlife.cl",
                 telefono="+56 9 8666 7788",

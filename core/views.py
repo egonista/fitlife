@@ -1,4 +1,5 @@
 import base64
+import csv
 import io
 import qrcode
 from django.contrib import messages
@@ -8,6 +9,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Max
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from .api_views import obtener_estado_aforo
 from .forms import (
@@ -82,6 +84,9 @@ def dashboard_view(request):
 
 @login_required
 def actualizar_aforo_view(request):
+    if not request.user.is_superuser:
+        messages.error(request, "Acceso restringido: Solo el Administrador General puede modificar la capacidad máxima de la sede.")
+        return redirect("dashboard")
     if request.method == "POST":
         estado_aforo = obtener_estado_aforo()
         form = ConfiguracionAforoForm(request.POST, instance=estado_aforo["config"])
@@ -89,7 +94,7 @@ def actualizar_aforo_view(request):
             config = form.save()
             messages.success(
                 request,
-                f"Configuración de aforo actualizada: {config.nombre_sede} (Máximo: {config.aforo_maximo} personas).",
+                f"Capacidad de sucursal actualizada: {config.nombre_sede} (Máximo: {config.aforo_maximo} personas).",
             )
         else:
             messages.error(request, "No se pudo actualizar la configuración de aforo.")
@@ -140,6 +145,17 @@ def socio_qr_png_view(request, pk):
     return HttpResponse(buffer.getvalue(), content_type="image/png")
 
 
+@login_required
+def socio_credencial_view(request, pk):
+    socio = get_object_or_404(Socio.objects.select_related('plan'), pk=pk)
+    socio.qr_base64 = generar_qr_base64(str(socio.token_qr))
+    return render(
+        request,
+        "core/credencial_socio.html",
+        {"socio": socio},
+    )
+
+
 # ==========================================
 # 3. CRUD DE PLANES, SOCIOS Y PAGOS
 # ==========================================
@@ -169,6 +185,9 @@ def gestion_membresias_view(request):
 
 @login_required
 def plan_crear_view(request):
+    if not request.user.is_superuser:
+        messages.error(request, "Acceso restringido: Solo el Administrador General puede crear planes comerciales.")
+        return redirect("gestion_membresias")
     if request.method == "POST":
         form = PlanMembresiaForm(request.POST)
         if form.is_valid():
@@ -181,6 +200,9 @@ def plan_crear_view(request):
 
 @login_required
 def plan_editar_view(request, pk):
+    if not request.user.is_superuser:
+        messages.error(request, "Acceso restringido: Solo el Administrador General puede modificar planes comerciales.")
+        return redirect("gestion_membresias")
     plan = get_object_or_404(PlanMembresia, pk=pk)
     if request.method == "POST":
         form = PlanMembresiaForm(request.POST, instance=plan)
@@ -206,6 +228,9 @@ def plan_editar_view(request, pk):
 
 @login_required
 def plan_eliminar_view(request, pk):
+    if not request.user.is_superuser:
+        messages.error(request, "Acceso restringido: Solo el Administrador General puede eliminar planes comerciales.")
+        return redirect("gestion_membresias")
     plan = get_object_or_404(PlanMembresia, pk=pk)
     if request.method == "POST":
         nombre = plan.nombre
@@ -215,7 +240,7 @@ def plan_eliminar_view(request, pk):
         except Exception:
             messages.error(
                 request,
-                f"No se puede eliminar el plan '{nombre}' porque tiene socios o pagos asociados.",
+                f"No se puede eliminar el plan '{nombre}' porque tiene alumnos o pagos asociados.",
             )
     return redirect("gestion_membresias")
 
@@ -262,11 +287,14 @@ def socio_editar_view(request, pk):
 
 @login_required
 def socio_eliminar_view(request, pk):
+    if not request.user.is_superuser:
+        messages.error(request, "Acceso restringido: Solo el Administrador General puede eliminar fichas de alumnos.")
+        return redirect("gestion_membresias")
     socio = get_object_or_404(Socio, pk=pk)
     if request.method == "POST":
         nombre = socio.nombre_completo
         socio.delete()
-        messages.warning(request, f"Socio '{nombre}' eliminado del sistema.")
+        messages.warning(request, f"Alumno '{nombre}' eliminado del sistema.")
     return redirect("gestion_membresias")
 
 
@@ -342,6 +370,9 @@ def gestion_clases_view(request):
 
 @login_required
 def clase_crear_view(request):
+    if not request.user.is_superuser:
+        messages.error(request, "Acceso restringido: Solo el Administrador General puede programar nuevas clases.")
+        return redirect("gestion_clases")
     if request.method == "POST":
         form = ClaseGrupalForm(request.POST)
         if form.is_valid():
@@ -357,6 +388,9 @@ def clase_crear_view(request):
 
 @login_required
 def clase_editar_view(request, pk):
+    if not request.user.is_superuser:
+        messages.error(request, "Acceso restringido: Solo el Administrador General puede modificar clases grupales.")
+        return redirect("gestion_clases")
     clase = get_object_or_404(ClaseGrupal, pk=pk)
     if request.method == "POST":
         form = ClaseGrupalForm(request.POST, instance=clase)
@@ -382,6 +416,9 @@ def clase_editar_view(request, pk):
 
 @login_required
 def clase_eliminar_view(request, pk):
+    if not request.user.is_superuser:
+        messages.error(request, "Acceso restringido: Solo el Administrador General puede eliminar clases grupales.")
+        return redirect("gestion_clases")
     clase = get_object_or_404(ClaseGrupal, pk=pk)
     if request.method == "POST":
         nombre = clase.nombre
@@ -512,7 +549,64 @@ def socio_rapido_clase_view(request):
 
 
 # ==========================================
-# 5. PÁGINA PERSONALIZADA DE ERROR 404
+# 5. EXPORTACIÓN DE REPORTES A EXCEL (CSV)
+# ==========================================
+
+@login_required
+def exportar_accesos_csv_view(request):
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    fecha_str = timezone.localdate().strftime("%Y-%m-%d")
+    response["Content-Disposition"] = f'attachment; filename="reporte_accesos_fitlife_{fecha_str}.csv"'
+    # BOM UTF-8 para que Microsoft Excel reconozca tildes y caracteres especiales automáticamente
+    response.write("\ufeff")
+
+    writer = csv.writer(response, delimiter=";")
+    writer.writerow(["ID", "Fecha y Hora", "Alumno", "RUT", "Movimiento", "Resultado", "Detalle", "Tiempo Lectura (ms)"])
+
+    registros = RegistroAcceso.objects.select_related("socio").order_by("-fecha_hora")
+    for reg in registros:
+        writer.writerow([
+            reg.id,
+            timezone.localtime(reg.fecha_hora).strftime("%d/%m/%Y %H:%M:%S"),
+            reg.socio.nombre_completo if reg.socio else "Código no registrado",
+            reg.socio.rut if reg.socio else "—",
+            reg.tipo_movimiento,
+            reg.get_resultado_display(),
+            reg.motivo_detalle,
+            f"{reg.tiempo_respuesta_ms:.2f}",
+        ])
+
+    return response
+
+
+@login_required
+def exportar_pagos_csv_view(request):
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    fecha_str = timezone.localdate().strftime("%Y-%m-%d")
+    response["Content-Disposition"] = f'attachment; filename="reporte_pagos_fitlife_{fecha_str}.csv"'
+    response.write("\ufeff")
+
+    writer = csv.writer(response, delimiter=";")
+    writer.writerow(["ID Pago", "Fecha Pago", "Alumno", "RUT", "Plan Contratado", "Monto ($)", "Medio de Pago", "N° Comprobante"])
+
+    pagos = PagoMembresia.objects.select_related("socio", "plan").order_by("-fecha_pago")
+    for p in pagos:
+        writer.writerow([
+            p.id,
+            timezone.localtime(p.fecha_pago).strftime("%d/%m/%Y %H:%M"),
+            p.socio.nombre_completo,
+            p.socio.rut,
+            p.plan.nombre,
+            int(p.monto),
+            p.get_metodo_pago_display(),
+            p.comprobante_referencia or "—",
+        ])
+
+    return response
+
+
+# ==========================================
+# 6. PÁGINA PERSONALIZADA DE ERROR 404
 # ==========================================
 
 def error_404_view(request, exception=None):
