@@ -51,6 +51,8 @@ urlpatterns = [
     path('socios/<int:pk>/eliminar/', views.socio_eliminar_view, name='socio_eliminar'),
     path('socios/<int:pk>/estado/', views.socio_cambiar_estado_view, name='socio_cambiar_estado'),
     path('pagos/registrar/', views.pago_registrar_view, name='pago_registrar'),
+    path('pagos/<int:pk>/editar/', views.pago_editar_view, name='pago_editar'),
+    path('pagos/<int:pk>/eliminar/', views.pago_eliminar_view, name='pago_eliminar'),
 
     # Gestión CRUD: Clases Grupales y Reservas con Lista de Espera
     path('clases/', views.gestion_clases_view, name='gestion_clases'),

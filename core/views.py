@@ -331,6 +331,47 @@ def pago_registrar_view(request):
     return redirect("gestion_membresias")
 
 
+@login_required
+def pago_editar_view(request, pk):
+    if not request.user.is_superuser:
+        messages.error(request, "Acceso restringido: Solo el Administrador General puede modificar registros de pagos.")
+        return redirect("gestion_membresias")
+    pago = get_object_or_404(PagoMembresia, pk=pk)
+    if request.method == "POST":
+        form = PagoMembresiaForm(request.POST, instance=pago)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Pago #{pago.pk} actualizado correctamente.")
+            return redirect("gestion_membresias")
+        messages.error(request, "Corrija los errores del formulario de pago.")
+    else:
+        form = PagoMembresiaForm(instance=pago)
+
+    return render(
+        request,
+        "core/form_editar.html",
+        {
+            "titulo": f"Editar Pago #{pago.pk} — {pago.socio.nombre_completo}",
+            "subtitulo": f"Plan: {pago.plan.nombre} | Fecha: {pago.fecha_pago:%d/%m/%Y %H:%M}",
+            "form": form,
+            "url_volver": "gestion_membresias",
+        },
+    )
+
+
+@login_required
+def pago_eliminar_view(request, pk):
+    if not request.user.is_superuser:
+        messages.error(request, "Acceso restringido: Solo el Administrador General puede eliminar pagos.")
+        return redirect("gestion_membresias")
+    pago = get_object_or_404(PagoMembresia, pk=pk)
+    if request.method == "POST":
+        socio_nombre = pago.socio.nombre_completo
+        pago.delete()
+        messages.warning(request, f"Registro de pago de '{socio_nombre}' eliminado.")
+    return redirect("gestion_membresias")
+
+
 # ==========================================
 # 4. CLASES GRUPALES Y LISTA DE ESPERA
 # ==========================================

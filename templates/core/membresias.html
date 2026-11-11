@@ -201,6 +201,7 @@
                     <th>Monto</th>
                     <th>Medio de Pago</th>
                     <th>N° Comprobante</th>
+                    {% if user.is_superuser %}<th class="text-end">Acciones</th>{% endif %}
                 </tr>
             </thead>
             <tbody>
@@ -212,10 +213,25 @@
                     <td class="mono fw-bold text-success">${{ pago.monto|floatformat:0 }}</td>
                     <td><span class="badge bg-dark border border-secondary">{{ pago.get_metodo_pago_display }}</span></td>
                     <td class="mono text-secondary">{{ pago.comprobante_referencia|default:"—" }}</td>
+                    {% if user.is_superuser %}
+                    <td class="text-end">
+                        <div class="d-inline-flex gap-1">
+                            <a href="{% url 'pago_editar' pago.pk %}" class="btn btn-sm btn-outline-light py-0 px-2" title="Editar pago">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form method="post" action="{% url 'pago_eliminar' pago.pk %}" class="d-inline" onsubmit="return confirm('¿Eliminar este registro de pago?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Eliminar pago">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                    {% endif %}
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" class="text-center text-secondary py-3">Sin pagos registrados.</td>
+                    <td colspan="7" class="text-center text-secondary py-3">Sin pagos registrados.</td>
                 </tr>
                 {% endfor %}
             </tbody>
