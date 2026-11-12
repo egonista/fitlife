@@ -162,11 +162,16 @@ class ValidarAccesoQRAPIView(APIView):
         aforo_maximo = estado_aforo['aforo_maximo']
 
         socio = None
-        try:
-            uuid_valido = uuid.UUID(token_raw)
-            socio = Socio.objects.select_related('plan').filter(token_qr=uuid_valido).first()
-        except (ValueError, TypeError):
-            socio = None
+        if token_raw:
+            try:
+                uuid_valido = uuid.UUID(token_raw)
+                socio = Socio.objects.select_related('plan').filter(token_qr=uuid_valido).first()
+            except (ValueError, TypeError):
+                # Permitir también lectura de QR que contenga el RUT o nombre del socio
+                socio = (
+                    Socio.objects.select_related('plan').filter(rut__iexact=token_raw).first()
+                    or Socio.objects.select_related('plan').filter(nombre_completo__iexact=token_raw).first()
+                )
 
         if not socio:
             permitido = False

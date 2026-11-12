@@ -1,3 +1,4 @@
+import uuid
 from datetime import timedelta
 from decimal import Decimal
 from django.contrib.auth.models import User
@@ -96,7 +97,7 @@ class Command(BaseCommand):
                 activo=True,
             )
 
-            # 4. Socios de Prueba (con RUT chileno Módulo 11 válido)
+            # 4. Socios de Prueba (con RUT chileno Módulo 11 válido y token_qr determinista)
             s_camila = Socio.objects.create(
                 rut="18.234.567-9",
                 nombre_completo="Camila Rojas",
@@ -106,6 +107,7 @@ class Command(BaseCommand):
                 estado_membresia="ACTIVA",
                 fecha_inicio=hoy - timedelta(days=40),
                 fecha_vencimiento=hoy + timedelta(days=325),
+                token_qr=uuid.UUID("11111111-1111-4111-8111-111111111101"),
             )
             s_matias = Socio.objects.create(
                 rut="19.876.543-0",
@@ -116,6 +118,7 @@ class Command(BaseCommand):
                 estado_membresia="ACTIVA",
                 fecha_inicio=hoy - timedelta(days=15),
                 fecha_vencimiento=hoy + timedelta(days=75),
+                token_qr=uuid.UUID("11111111-1111-4111-8111-111111111102"),
             )
             s_valentina = Socio.objects.create(
                 rut="20.456.789-1",
@@ -126,6 +129,7 @@ class Command(BaseCommand):
                 estado_membresia="ACTIVA",
                 fecha_inicio=hoy - timedelta(days=5),
                 fecha_vencimiento=hoy + timedelta(days=25),
+                token_qr=uuid.UUID("11111111-1111-4111-8111-111111111103"),
             )
             s_diego = Socio.objects.create(
                 rut="16.543.210-K",
@@ -136,6 +140,7 @@ class Command(BaseCommand):
                 estado_membresia="ACTIVA",
                 fecha_inicio=hoy - timedelta(days=45),
                 fecha_vencimiento=hoy + timedelta(days=5),
+                token_qr=uuid.UUID("11111111-1111-4111-8111-111111111104"),
             )
             s_francisca = Socio.objects.create(
                 rut="17.654.321-3",
@@ -146,6 +151,7 @@ class Command(BaseCommand):
                 estado_membresia="ACTIVA",
                 fecha_inicio=hoy - timedelta(days=100),
                 fecha_vencimiento=hoy + timedelta(days=5),
+                token_qr=uuid.UUID("11111111-1111-4111-8111-111111111105"),
             )
             s_sebastian = Socio.objects.create(
                 rut="15.321.654-1",
@@ -156,6 +162,7 @@ class Command(BaseCommand):
                 estado_membresia="CONGELADA",
                 fecha_inicio=hoy - timedelta(days=20),
                 fecha_vencimiento=hoy + timedelta(days=70),
+                token_qr=uuid.UUID("11111111-1111-4111-8111-111111111106"),
             )
 
             # Registrar pagos históricos para los socios activos

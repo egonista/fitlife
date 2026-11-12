@@ -439,6 +439,19 @@ async function ejecutarValidacionQR(tipoMovimiento) {
         motivo.textContent = data.motivo;
         subtitulo.textContent = `${data.tipo_movimiento} | PERSONAS EN SALA: ${data.aforo_actual}/${data.aforo_maximo}`;
 
+        if (data.socio) {
+            document.getElementById("visor-socio-nombre").textContent = data.socio.nombre_completo;
+            document.getElementById("visor-socio-detalle").textContent = `${data.socio.rut} | ${data.socio.estado_membresia} (Vence: ${data.socio.fecha_vencimiento})`;
+            const img = document.getElementById("visor-qr-img");
+            if (img) {
+                img.src = `/socios/${data.socio.id}/qr.png`;
+                img.style.opacity = "1";
+            }
+        } else {
+            document.getElementById("visor-socio-nombre").textContent = "Código QR No Registrado";
+            document.getElementById("visor-socio-detalle").textContent = tokenQR ? `Leído: ${tokenQR.slice(0, 24)}` : "Sin código";
+        }
+
         if (data.permitido) {
             card.className = "card card-fitlife p-4 mb-4 border-2 border-success bg-success bg-opacity-10";
             icono.className = "rounded-circle bg-success text-dark d-flex align-items-center justify-content-center";
