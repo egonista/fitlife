@@ -1,4 +1,6 @@
+from datetime import timedelta
 from django import forms
+from django.utils import timezone
 from .models import (
     PlanMembresia,
     Socio,
@@ -56,9 +58,26 @@ class SocioForm(BootstrapFormMixin, forms.ModelForm):
             'fecha_vencimiento': forms.DateInput(attrs={'type': 'date'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['fecha_vencimiento'].required = False
+        if not self.instance.pk and not self.initial.get('fecha_inicio'):
+            hoy_iso = timezone.localdate().strftime('%Y-%m-%d')
+            self.initial['fecha_inicio'] = hoy_iso
+            self.fields['fecha_inicio'].widget.attrs['value'] = hoy_iso
+
     def clean_rut(self):
         rut = self.cleaned_data.get('rut', '')
         return validar_y_formatear_rut(rut)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        plan = cleaned_data.get('plan')
+        fecha_inicio = cleaned_data.get('fecha_inicio') or timezone.localdate()
+        cleaned_data['fecha_inicio'] = fecha_inicio
+        if plan and not cleaned_data.get('fecha_vencimiento'):
+            cleaned_data['fecha_vencimiento'] = fecha_inicio + timedelta(days=plan.duracion_dias)
+        return cleaned_data
 
 
 class PagoMembresiaForm(BootstrapFormMixin, forms.ModelForm):

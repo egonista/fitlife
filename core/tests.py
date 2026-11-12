@@ -273,6 +273,49 @@ class FitLifeDomainModelTests(TestCase):
         with self.assertRaises(ValidationError):
             validar_y_formatear_rut("18.234.567-0")
 
+    def test_calculo_automatico_vencimiento_y_bloqueo_choque_horario(self):
+        # 1. Al crear un socio sin fecha_vencimiento, se calcula automáticamente con plan.duracion_dias
+        plan_90 = PlanMembresia.objects.create(
+            nombre="Plan Trimestral Test",
+            precio=Decimal("90000.00"),
+            duracion_dias=90,
+            acceso_clases_grupales=True,
+            activo=True,
+        )
+        socio_auto = Socio.objects.create(
+            rut="21.199.102-K",
+            nombre_completo="Egon Muñoz",
+            email="egon@fitlife.cl",
+            plan=plan_90,
+            estado_membresia="ACTIVA",
+            fecha_inicio=self.hoy,
+        )
+        self.assertEqual(socio_auto.fecha_vencimiento, self.hoy + timedelta(days=90))
+
+        # 2. Bloqueo de choque de horario en el mismo día/hora
+        inicio_comun = timezone.now() + timedelta(days=2)
+        clase_yudo_1 = ClaseGrupal.objects.create(
+            nombre="Yudo",
+            instructor="Sensei 1",
+            sala="Sala Yudo 1",
+            fecha_hora_inicio=inicio_comun,
+            duracion_minutos=60,
+            cupo_maximo=10,
+        )
+        clase_yudo_2 = ClaseGrupal.objects.create(
+            nombre="Yudo 2",
+            instructor="Sensei 2",
+            sala="Sala Yudo 2",
+            fecha_hora_inicio=inicio_comun + timedelta(minutes=30),  # Se solapa con Yudo 1
+            duracion_minutos=60,
+            cupo_maximo=10,
+        )
+
+        ReservaClase.objects.create(clase=clase_yudo_1, socio=socio_auto)
+        with self.assertRaises(ValidationError):
+            ReservaClase.objects.create(clase=clase_yudo_2, socio=socio_auto)
+
+
 
 
 

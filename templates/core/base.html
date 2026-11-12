@@ -4,28 +4,56 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}FitLife Gym{% endblock %}</title>
+    <script>
+        (function() {
+            const temaGuardado = localStorage.getItem("fitlife_theme") || "dark";
+            document.documentElement.setAttribute("data-bs-theme", temaGuardado);
+        })();
+    </script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
-        :root {
+        :root, [data-bs-theme="dark"] {
             --fitlife-bg: #0b1120;
             --fitlife-card: #111827;
             --fitlife-card-border: #1f2937;
             --fitlife-emerald: #10b981;
             --fitlife-cyan: #06b6d4;
+            --fitlife-text: #f1f5f9;
+        }
+        [data-bs-theme="light"] {
+            --fitlife-bg: #f1f5f9;
+            --fitlife-card: #ffffff;
+            --fitlife-card-border: #cbd5e1;
+            --fitlife-emerald: #059669;
+            --fitlife-cyan: #0284c7;
+            --fitlife-text: #0f172a;
         }
         body {
             background-color: var(--fitlife-bg);
-            color: #f1f5f9;
+            color: var(--fitlife-text);
             font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            transition: background-color 0.2s ease, color 0.2s ease;
         }
         .navbar-fitlife {
             background: rgba(15, 23, 42, 0.96);
             backdrop-filter: blur(10px);
             border-bottom: 1px solid rgba(16, 185, 129, 0.25);
+        }
+        [data-bs-theme="light"] .navbar-fitlife {
+            background: rgba(255, 255, 255, 0.96) !important;
+            border-bottom: 1px solid #cbd5e1;
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+        }
+        [data-bs-theme="light"] .navbar-fitlife .nav-link {
+            color: #334155 !important;
+        }
+        [data-bs-theme="light"] .navbar-fitlife .navbar-toggler {
+            border-color: #94a3b8;
+            filter: invert(1);
         }
         .brand-badge {
             background: linear-gradient(135deg, #10b981, #06b6d4);
@@ -40,6 +68,37 @@
             border: 1px solid var(--fitlife-card-border);
             border-radius: 14px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+        }
+        [data-bs-theme="light"] .card-fitlife {
+            box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08);
+        }
+        /* Adaptación automática de utilidades oscuras cuando está activo el Modo Claro */
+        [data-bs-theme="light"] .bg-dark {
+            background-color: #f8fafc !important;
+            color: #0f172a !important;
+        }
+        [data-bs-theme="light"] .text-light,
+        [data-bs-theme="light"] .text-white {
+            color: #0f172a !important;
+        }
+        [data-bs-theme="light"] .table-dark {
+            --bs-table-bg: #ffffff;
+            --bs-table-color: #0f172a;
+            --bs-table-border-color: #e2e8f0;
+            --bs-table-hover-bg: #f1f5f9;
+            --bs-table-hover-color: #0f172a;
+            color: #0f172a !important;
+        }
+        [data-bs-theme="light"] .border-secondary {
+            border-color: #cbd5e1 !important;
+        }
+        [data-bs-theme="light"] .btn-outline-light {
+            color: #1e293b !important;
+            border-color: #94a3b8 !important;
+        }
+        [data-bs-theme="light"] .btn-outline-light:hover {
+            background-color: #e2e8f0 !important;
+            color: #0f172a !important;
         }
         .btn-emerald {
             background: linear-gradient(135deg, #10b981, #059669);
@@ -105,7 +164,15 @@
                         </a>
                     </li>
                 </ul>
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <button type="button"
+                            id="btn-toggle-tema"
+                            class="btn btn-sm btn-outline-secondary rounded-pill"
+                            onclick="alternarTemaFitLife()"
+                            title="Cambiar entre Modo Claro y Modo Oscuro">
+                        <i class="bi bi-sun-fill text-warning me-1" id="icono-tema"></i>
+                        <span id="texto-tema">Modo Claro</span>
+                    </button>
                     {% if user.is_superuser %}
                     <a href="{% url 'admin:index' %}" class="btn btn-sm btn-outline-secondary rounded-pill">
                         <i class="bi bi-gear"></i> Administración
@@ -128,6 +195,16 @@
             </div>
         </div>
     </nav>
+    {% else %}
+    <div class="container-fluid px-4 pt-3 text-end">
+        <button type="button"
+                id="btn-toggle-tema"
+                class="btn btn-sm btn-outline-secondary rounded-pill"
+                onclick="alternarTemaFitLife()">
+            <i class="bi bi-sun-fill text-warning me-1" id="icono-tema"></i>
+            <span id="texto-tema">Modo Claro</span>
+        </button>
+    </div>
     {% endif %}
 
     <main class="container-fluid px-4 py-4 flex-grow-1">
@@ -154,7 +231,29 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Formateador automático de RUT chileno (XX.XXX.XXX-Y) en tiempo real
+        // 1. Selector de Tema (Modo Oscuro / Modo Claro) con persistencia en localStorage
+        function actualizarBotonTema(tema) {
+            const icono = document.getElementById("icono-tema");
+            const texto = document.getElementById("texto-tema");
+            if (!icono || !texto) return;
+            if (tema === "light") {
+                icono.className = "bi bi-moon-stars-fill text-primary me-1";
+                texto.textContent = "Modo Oscuro";
+            } else {
+                icono.className = "bi bi-sun-fill text-warning me-1";
+                texto.textContent = "Modo Claro";
+            }
+        }
+
+        function alternarTemaFitLife() {
+            const actual = document.documentElement.getAttribute("data-bs-theme") || "dark";
+            const nuevo = actual === "dark" ? "light" : "dark";
+            document.documentElement.setAttribute("data-bs-theme", nuevo);
+            localStorage.setItem("fitlife_theme", nuevo);
+            actualizarBotonTema(nuevo);
+        }
+
+        // 2. Formateador automático de RUT chileno (XX.XXX.XXX-Y) en tiempo real
         document.addEventListener("input", function (e) {
             if (e.target && e.target.name === "rut") {
                 let valor = e.target.value.replace(/[^0-9kK]/g, "").toUpperCase();
@@ -168,6 +267,77 @@
                     e.target.value = valor;
                 }
             }
+        });
+
+        // 3. Cálculo automático de fecha_inicio y fecha_vencimiento según los días del Plan seleccionado
+        function obtenerHoyISO() {
+            const hoy = new Date();
+            const yyyy = hoy.getFullYear();
+            const mm = String(hoy.getMonth() + 1).padStart(2, "0");
+            const dd = String(hoy.getDate()).padStart(2, "0");
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
+        function recalcularVencimientoEnFormulario(form) {
+            if (!form) return;
+            const selectPlan = form.querySelector('select[name="plan"]');
+            const inputInicio = form.querySelector('input[name="fecha_inicio"]');
+            const inputVenc = form.querySelector('input[name="fecha_vencimiento"]');
+            if (!selectPlan || !inputInicio || !inputVenc) return;
+
+            if (!inputInicio.value) {
+                inputInicio.value = obtenerHoyISO();
+            }
+
+            const opcionSeleccionada = selectPlan.options[selectPlan.selectedIndex];
+            if (!opcionSeleccionada || !opcionSeleccionada.value) {
+                // Si aún no elige plan y hay al menos una opción con valor, seleccionar la primera por defecto
+                if (selectPlan.options.length > 1 && !selectPlan.value) {
+                    selectPlan.selectedIndex = 1;
+                }
+            }
+
+            const optActiva = selectPlan.options[selectPlan.selectedIndex];
+            if (!optActiva) return;
+
+            const matchDias = optActiva.text.match(/(\d+)\s*d[ií]as/i);
+            if (matchDias && inputInicio.value) {
+                const dias = parseInt(matchDias[1], 10);
+                const partes = inputInicio.value.split("-");
+                if (partes.length === 3) {
+                    const fechaBase = new Date(
+                        parseInt(partes[0], 10),
+                        parseInt(partes[1], 10) - 1,
+                        parseInt(partes[2], 10)
+                    );
+                    fechaBase.setDate(fechaBase.getDate() + dias);
+                    const yyyy = fechaBase.getFullYear();
+                    const mm = String(fechaBase.getMonth() + 1).padStart(2, "0");
+                    const dd = String(fechaBase.getDate()).padStart(2, "0");
+                    inputVenc.value = `${yyyy}-${mm}-${dd}`;
+                }
+            }
+        }
+
+        document.addEventListener("change", function (e) {
+            if (e.target && (e.target.name === "plan" || e.target.name === "fecha_inicio")) {
+                recalcularVencimientoEnFormulario(e.target.closest("form"));
+            }
+        });
+
+        document.addEventListener("DOMContentLoaded", function () {
+            actualizarBotonTema(document.documentElement.getAttribute("data-bs-theme") || "dark");
+            document.querySelectorAll("form").forEach(form => {
+                const inputVenc = form.querySelector('input[name="fecha_vencimiento"]');
+                if (inputVenc && !inputVenc.value) {
+                    recalcularVencimientoEnFormulario(form);
+                }
+            });
+            document.querySelectorAll(".modal").forEach(modalEl => {
+                modalEl.addEventListener("shown.bs.modal", function () {
+                    modalEl.querySelectorAll("form").forEach(form => recalcularVencimientoEnFormulario(form));
+                });
+            });
         });
     </script>
     {% block extra_js %}{% endblock %}

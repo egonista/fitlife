@@ -73,6 +73,13 @@ class Socio(models.Model):
     def __str__(self):
         return f"{self.nombre_completo} ({self.rut}) - {self.estado_membresia}"
 
+    def save(self, *args, **kwargs):
+        if not self.fecha_inicio:
+            self.fecha_inicio = timezone.localdate()
+        if not self.fecha_vencimiento and self.plan_id:
+            self.fecha_vencimiento = self.fecha_inicio + timedelta(days=self.plan.duracion_dias)
+        super().save(*args, **kwargs)
+
     def verificar_vigencia(self) -> bool:
         """
         Verifica si la membresía del socio se encuentra vigente.
@@ -282,6 +289,30 @@ class ReservaClase(models.Model):
                     )
 
                 if self.estado != 'CANCELADA':
+                    # Validar que el socio no tenga choque de horario con otra clase ese mismo día/hora
+                    inicio_nueva = clase_bloqueada.fecha_hora_inicio
+                    fin_nueva = inicio_nueva + timedelta(minutes=clase_bloqueada.duracion_minutos)
+
+                    reservas_socio = (
+                        ReservaClase.objects.select_related('clase')
+                        .filter(
+                            socio=self.socio,
+                            estado__in=['CONFIRMADA', 'LISTA_ESPERA', 'ASISTIO'],
+                        )
+                        .exclude(clase=clase_bloqueada)
+                    )
+                    for res_actual in reservas_socio:
+                        inicio_ext = res_actual.clase.fecha_hora_inicio
+                        fin_ext = inicio_ext + timedelta(minutes=res_actual.clase.duracion_minutos)
+                        if inicio_nueva < fin_ext and fin_nueva > inicio_ext:
+                            inicio_local = timezone.localtime(inicio_ext)
+                            fin_local = timezone.localtime(fin_ext)
+                            raise ValidationError(
+                                f"Choque de horario: '{self.socio.nombre_completo}' ya está inscrito en "
+                                f"'{res_actual.clase.nombre}' ({inicio_local:%d/%m/%Y %H:%M} - {fin_local:%H:%M}), "
+                                f"que se superpone con el horario de '{clase_bloqueada.nombre}'."
+                            )
+
                     ocupados = ReservaClase.objects.filter(
                         clase=clase_bloqueada,
                         estado__in=['CONFIRMADA', 'ASISTIO']
