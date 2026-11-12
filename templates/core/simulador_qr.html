@@ -102,8 +102,8 @@
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
                         <h5 class="fw-bold mb-0"><i class="bi bi-upc-scan text-info me-2"></i>Lector Óptico de Torniquete</h5>
                         <div class="d-flex gap-2">
-                            <button type="button" id="btn-camara-qr" class="btn btn-sm btn-outline-warning" onclick="alternarCamaraQR()">
-                                <i class="bi bi-qr-code-scan me-1"></i> Escanear con Lector / Cámara
+                            <button type="button" id="btn-camara-qr" class="btn btn-sm btn-warning fw-bold text-dark" onclick="alternarCamaraQR()">
+                                <i class="bi bi-camera-video-fill me-1"></i> Escanear con Cámara
                             </button>
                             <label for="input-archivo-qr" class="btn btn-sm btn-outline-info mb-0" style="cursor: pointer;" title="Subir imagen de código QR">
                                 <i class="bi bi-upload me-1"></i> Subir QR
@@ -286,56 +286,60 @@ async function alternarCamaraQR() {
 
     if (!camaraEncendida) {
         contenedor.classList.remove("d-none");
-        btn.innerHTML = '<i class="bi bi-stop-circle me-1"></i> Detener Lector';
+        btn.innerHTML = '<i class="bi bi-stop-circle me-1"></i> Detener Cámara';
         btn.className = "btn btn-sm btn-danger";
 
-        // Intentar cámara web si el navegador está en contexto seguro (HTTPS o localhost)
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            escanerCamara = new Html5Qrcode("lector-camara-qr");
-            try {
-                await escanerCamara.start(
-                    { facingMode: "environment" },
-                    { fps: 10, qrbox: { width: 220, height: 220 } },
-                    (decodedText) => {
-                        document.getElementById("input-token-qr").value = decodedText.trim();
-                        ejecutarValidacionQR("ENTRADA");
-                        alternarCamaraQR();
-                    },
-                    () => {}
-                );
-                camaraEncendida = true;
-                return;
-            } catch (err) {
-                // Si no hay cámara física o permiso, usar el Lector Óptico Digital sin mostrar alerta de error
-            }
+        // Verificar si el navegador bloquea navigator.mediaDevices por estar en HTTP público sin permiso
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            const origenActual = window.location.origin;
+            visorLector.innerHTML = `
+                <div class="p-3 bg-dark text-light small border border-warning rounded-3">
+                    <div class="fw-bold text-warning mb-2">
+                        <i class="bi bi-camera-video-off me-1"></i> Cómo permitir que el navegador encienda tu cámara en esta IP (${origenActual}):
+                    </div>
+                    <ol class="mb-2 ps-3 text-light">
+                        <li>Abre una pestaña nueva en tu navegador y pega:<br>
+                            <code class="text-info user-select-all">chrome://flags/#unsafely-treat-insecure-origin-as-secure</code>
+                        </li>
+                        <li>En el cuadro de texto que aparece ahí, pega esta dirección exacta:<br>
+                            <code class="text-success fw-bold user-select-all">${origenActual}</code>
+                        </li>
+                        <li>Cambia el botón de la derecha de <em>Disabled</em> a <strong>Enabled</strong> y presiona <strong>Relaunch</strong> abajo.</li>
+                    </ol>
+                    <div class="text-secondary" style="font-size: 11px;">
+                        (Esto es necesario una sola vez porque Chrome/Brave bloquea las cámaras web en direcciones <code>http://</code> que no sean localhost).
+                    </div>
+                </div>
+            `;
+            camaraEncendida = true;
+            return;
         }
 
-        // Modo Lector Óptico Láser Digital (funciona siempre en HTTP AWS EC2 sin errores de navegador)
-        camaraEncendida = true;
-        const qrImgActual = document.getElementById("visor-qr-img").src;
-        const nombreActual = document.getElementById("visor-socio-nombre").textContent;
-        visorLector.innerHTML = `
-            <div class="p-4 text-center position-relative" style="background: radial-gradient(circle, #064e3b 0%, #0f172a 100%);">
-                <div class="d-inline-block p-2 bg-white rounded-3 position-relative overflow-hidden shadow">
-                    <img src="${qrImgActual}" style="width: 140px; height: 140px; object-fit: contain;">
-                    <div style="position: absolute; left: 0; right: 0; height: 3px; background: #10b981; box-shadow: 0 0 12px 3px #10b981; animation: laserScan 1.1s infinite alternate;"></div>
-                </div>
-                <div class="mt-2 text-light fw-bold small">Leyendo credencial QR de: ${nombreActual}</div>
-                <div class="text-info mono" style="font-size: 11px;">PROCESANDO LECTURA ÓPTICA...</div>
-            </div>
-            <style>
-                @keyframes laserScan {
-                    0% { top: 8px; }
-                    100% { top: 140px; }
-                }
-            </style>
-        `;
-        setTimeout(async () => {
-            if (camaraEncendida) {
-                await ejecutarValidacionQR("ENTRADA");
-                alternarCamaraQR();
-            }
-        }, 1200);
+        escanerCamara = new Html5Qrcode("lector-camara-qr");
+        try {
+            const camaras = await Html5Qrcode.getCameras();
+            const camaraConfig = (camaras && camaras.length > 0)
+                ? camaras[0].id
+                : { facingMode: "user" };
+
+            await escanerCamara.start(
+                camaraConfig,
+                { fps: 10, qrbox: { width: 220, height: 220 } },
+                (decodedText) => {
+                    document.getElementById("input-token-qr").value = decodedText.trim();
+                    ejecutarValidacionQR("ENTRADA");
+                    alternarCamaraQR();
+                },
+                () => {}
+            );
+            camaraEncendida = true;
+        } catch (err) {
+            camaraEncendida = false;
+            contenedor.classList.add("d-none");
+            btn.innerHTML = '<i class="bi bi-camera-video-fill me-1"></i> Escanear con Cámara';
+            btn.className = "btn btn-sm btn-warning fw-bold text-dark";
+            alert("Debes aceptar el permiso de cámara del navegador para iniciar el escáner.");
+        }
     } else {
         if (escanerCamara) {
             try {
@@ -347,8 +351,8 @@ async function alternarCamaraQR() {
         camaraEncendida = false;
         visorLector.innerHTML = "";
         contenedor.classList.add("d-none");
-        btn.innerHTML = '<i class="bi bi-qr-code-scan me-1"></i> Escanear con Lector / Cámara';
-        btn.className = "btn btn-sm btn-outline-warning";
+        btn.innerHTML = '<i class="bi bi-camera-video-fill me-1"></i> Escanear con Cámara';
+        btn.className = "btn btn-sm btn-warning fw-bold text-dark";
     }
 }
 
