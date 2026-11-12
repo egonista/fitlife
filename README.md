@@ -10,8 +10,9 @@ Sistema Fullstack desarrollado con **Django**, **Django REST Framework (DRF)** y
 
 ## 🌐 Acceso al Despliegue en AWS EC2
 
-- **URL / IP Pública AWS EC2:** `http://<IP_PUBLICA_EC2>/` *(Actualizar con la IP elástica/pública de la sesión activa de AWS Academy)*
-- **Panel de Administración Django:** `http://<IP_PUBLICA_EC2>/admin/`
+- **URL / IP Pública AWS EC2:** http://50.19.184.225/
+- **Panel de Administración Django:** http://50.19.184.225/admin/
+- **API REST (DRF):** http://50.19.184.225/api/
 - **Documentación de Apoyo IA:** Ver archivo [`prompts_ia.md`](./prompts_ia.md)
 
 ---
