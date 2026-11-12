@@ -99,23 +99,30 @@
                 </div>
 
                 <div class="col-12 col-md-8">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
                         <h5 class="fw-bold mb-0"><i class="bi bi-upc-scan text-info me-2"></i>Lector Óptico de Torniquete</h5>
-                        <button type="button" id="btn-camara-qr" class="btn btn-sm btn-outline-warning" onclick="alternarCamaraQR()">
-                            <i class="bi bi-camera-video me-1"></i> Escanear con Cámara
-                        </button>
+                        <div class="d-flex gap-2">
+                            <button type="button" id="btn-camara-qr" class="btn btn-sm btn-outline-warning" onclick="alternarCamaraQR()">
+                                <i class="bi bi-camera-video me-1"></i> Cámara en Vivo
+                            </button>
+                            <label for="input-archivo-qr" class="btn btn-sm btn-outline-info mb-0" style="cursor: pointer;" title="Funciona en cualquier servidor HTTP/HTTPS">
+                                <i class="bi bi-qr-code me-1"></i> Escanear Imagen / Foto QR
+                            </label>
+                            <input type="file" id="input-archivo-qr" accept="image/*" capture="environment" class="d-none" onchange="escanearArchivoQR(this)">
+                        </div>
                     </div>
                     <p class="text-secondary small mb-3">
-                        Escanea con la cámara o selecciona la credencial digital del alumno para autorizar su entrada o registrar su salida.
+                        Escanea con la cámara, sube/fotografía el código QR del carnet o selecciona al alumno del listado.
                     </p>
 
                     <!-- Contenedor de Cámara Web en Vivo (oculto por defecto) -->
                     <div id="contenedor-camara-qr" class="mb-3 d-none">
                         <div id="lector-camara-qr" class="rounded-3 overflow-hidden border border-warning"></div>
-                        <div class="small text-warning text-center mt-1">
-                            Acerca el código QR del alumno (desde el celular o carnet) frente a la cámara
+                        <div class="small text-warning text-center mt-1" id="mensaje-camara-qr">
+                            Acerca el código QR del alumno frente a la cámara
                         </div>
                     </div>
+                    <div id="lector-archivo-oculto" class="d-none"></div>
 
                     <div class="mb-3">
                         <label class="form-label small text-secondary fw-semibold">Código de Credencial Digital</label>
@@ -295,10 +302,32 @@ async function alternarCamaraQR() {
             );
             camaraEncendida = true;
         } catch (err) {
-            contenedor.classList.add("d-none");
-            btn.innerHTML = '<i class="bi bi-camera-video me-1"></i> Escanear con Cámara';
+            camaraEncendida = false;
+            btn.innerHTML = '<i class="bi bi-camera-video me-1"></i> Cámara en Vivo';
             btn.className = "btn btn-sm btn-outline-warning";
-            alert("No se pudo acceder a la cámara web en este dispositivo.");
+            const origenActual = window.location.origin;
+            const esHttpRemoto = window.location.protocol === "http:" && window.location.hostname !== "127.0.0.1" && window.location.hostname !== "localhost";
+            if (esHttpRemoto) {
+                document.getElementById("lector-camara-qr").innerHTML = `
+                    <div class="p-3 bg-dark text-light small">
+                        <div class="fw-bold text-warning mb-1">
+                            <i class="bi bi-shield-lock me-1"></i> Nota de seguridad del navegador en IP pública HTTP:
+                        </div>
+                        <p class="mb-2 text-secondary">
+                            Los navegadores bloquean el video en vivo en direcciones <code>http://</code> que no sean <code>localhost</code>. Tienes 2 opciones inmediatas:
+                        </p>
+                        <div class="mb-2">
+                            <strong>Opción 1 (Inmediata):</strong> Usa el botón azul <strong>"Escanear Imagen / Foto QR"</strong> de arriba para leer cualquier código QR descargado o tomar foto desde el celular.
+                        </div>
+                        <div>
+                            <strong>Opción 2 (Habilitar cámara en Chrome/Brave para esta IP):</strong> Copia <code>chrome://flags/#unsafely-treat-insecure-origin-as-secure</code> en una pestaña nueva, pega <code>${origenActual}</code>, cámbialo a <strong>Enabled</strong> y reinicia el navegador.
+                        </div>
+                    </div>
+                `;
+            } else {
+                contenedor.classList.add("d-none");
+                alert("No se pudo acceder a la cámara web en este dispositivo.");
+            }
         }
     } else {
         if (escanerCamara) {
@@ -309,8 +338,23 @@ async function alternarCamaraQR() {
         }
         camaraEncendida = false;
         contenedor.classList.add("d-none");
-        btn.innerHTML = '<i class="bi bi-camera-video me-1"></i> Escanear con Cámara';
+        btn.innerHTML = '<i class="bi bi-camera-video me-1"></i> Cámara en Vivo';
         btn.className = "btn btn-sm btn-outline-warning";
+    }
+}
+
+async function escanearArchivoQR(inputElement) {
+    if (!inputElement.files || inputElement.files.length === 0) return;
+    const archivo = inputElement.files[0];
+    const lectorArchivo = new Html5Qrcode("lector-archivo-oculto");
+    try {
+        const decodedText = await lectorArchivo.scanFile(archivo, true);
+        document.getElementById("input-token-qr").value = decodedText.trim();
+        await ejecutarValidacionQR("ENTRADA");
+    } catch (err) {
+        alert("No se detectó un código QR válido en la imagen seleccionada.");
+    } finally {
+        inputElement.value = "";
     }
 }
 

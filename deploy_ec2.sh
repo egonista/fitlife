@@ -82,11 +82,23 @@ systemctl daemon-reload
 systemctl enable fitlife
 systemctl restart fitlife
 
-echo "=== [7/7] Configurando Nginx como Proxy Inverso en Puerto 80 ==="
+echo "=== [7/7] Configurando Nginx (HTTP 80 y HTTPS 443 con SSL autofirmado para Camara Web) ==="
+mkdir -p /etc/nginx/ssl
+if [ ! -f /etc/nginx/ssl/fitlife.crt ]; then
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+        -keyout /etc/nginx/ssl/fitlife.key \
+        -out /etc/nginx/ssl/fitlife.crt \
+        -subj "/C=CL/ST=Santiago/L=Santiago/O=FitLife/CN=${PUBLIC_IP}"
+fi
+
 cat > /etc/nginx/sites-available/fitlife <<EOF
 server {
     listen 80;
+    listen 443 ssl;
     server_name ${PUBLIC_IP} _;
+
+    ssl_certificate /etc/nginx/ssl/fitlife.crt;
+    ssl_certificate_key /etc/nginx/ssl/fitlife.key;
 
     location = /favicon.ico { access_log off; log_not_found off; }
 
